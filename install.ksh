@@ -131,9 +131,9 @@ install_dunst() {
 
 install_session_files() {
 	log "Installing session files…"
-	install -m 755 "$SCRIPT_DIR/xsession" "$HOME/.xsession"
+	install -m 755 "$SCRIPT_DIR/.xsession" "$HOME/.xsession"
 	install -m 755 "$SCRIPT_DIR/.Xresources" "$HOME/.Xresources"
-	install -m 644 "$SCRIPT_DIR/profile" "$HOME/.profile"
+	install -m 644 "$SCRIPT_DIR/.profile" "$HOME/.profile"
 }
 
 update_profile_home() {
