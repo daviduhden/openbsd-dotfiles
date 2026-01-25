@@ -87,12 +87,12 @@ ask_target_user() {
 	fi
 
 	export HOME="$TARGET_HOME"
-	log "Installing dotfiles for user: $TARGET_USER"
+	log "Installing dotfiles for user: '$TARGET_USER'"
 	log "Using HOME: $HOME"
 }
 
 configure_doas() {
-	log "Configuring doasers for $TARGET_USER…"
+	log "Configuring doasers for $TARGET_USER …"
 	DOAS_RULE="permit persist $TARGET_USER as root"
 	if ! grep -qF "$DOAS_RULE" /etc/doas.conf 2>/dev/null; then
 		sh -c "echo '$DOAS_RULE' >> /etc/doas.conf"
@@ -104,29 +104,29 @@ configure_doas() {
 
 install_packages() {
 	load_packages
-	log "Installing packages from $PKG_FILE (you may be prompted for doas password)…"
+	log "Installing packages from $PKG_FILE …"
 	for pkg in "${PKGS[@]}"; do
 		pkg_add -- "$pkg"
 	done
 }
 
 create_directories() {
-	log "Creating configuration directories…"
+	log "Creating configuration directories …"
 	mkdir -p \
 		"$HOME/.config/spectrwm" \
 		"$HOME/.config/dunst"
 }
 
 install_spectrwm() {
-	log "Installing spectrwm configuration…"
-	install -m 644 "$SCRIPT_DIR/spectrwm.conf" "$HOME/.config/spectrwm/spectrwm.conf"
-	install -m 755 "$SCRIPT_DIR/initscreen.sh" "$SCRIPT_DIR/baraction.sh" "$SCRIPT_DIR/screenshot.sh" \
-		"$HOME/.config/spectrwm/"
+	log "Installing spectrwm configuration …"
+	install -m 644 "$SCRIPT_DIR/.config/spectrwm/spectrwm.conf" "$HOME/.config/spectrwm/spectrwm.conf"
+	install -m 755 "$SCRIPT_DIR/.config/spectrwm/initscreen.sh" "$SCRIPT_DIR/.config/spectrwm/baraction.sh" \
+		"$SCRIPT_DIR/.config/spectrwm/screenshot.sh" "$HOME/.config/spectrwm/"
 }
 
 install_dunst() {
-	log "Installing dunst configuration…"
-	install -m 644 "$SCRIPT_DIR/dunstrc" "$HOME/.config/dunst/dunstrc"
+	log "Installing dunst configuration …"
+	install -m 644 "$SCRIPT_DIR/.config/dunst/dunstrc" "$HOME/.config/dunst/dunstrc"
 }
 
 install_session_files() {
@@ -157,7 +157,7 @@ update_profile_home() {
 
 fix_ownership() {
 	if [ "$(id -u)" -eq 0 ]; then
-		log "Fixing ownership for $TARGET_USER…"
+		log "Fixing ownership for $TARGET_USER …"
 		chown -R "$TARGET_USER:$TARGET_USER" "$HOME/.config"
 		chown "$TARGET_USER:$TARGET_USER" "$HOME/.xsession" "$HOME/.profile"
 	fi
