@@ -3,9 +3,9 @@
 # Simple screenshot script for spectrwm
 #
 # Usage:
-#   screenshot.sh          # Take a full-screen screenshot
-#   screenshot.sh full     # Take a full-screen screenshot
-#   screenshot.sh window   # Take a screenshot of a selected window/area
+#   screenshot.ksh          # Take a full-screen screenshot
+#   screenshot.ksh full     # Take a full-screen screenshot
+#   screenshot.ksh window   # Take a screenshot of a selected window/area
 #
 # Requires 'scrot' to be installed
 # Saves screenshots to ~/Pictures/Screenshots/
