@@ -17,27 +17,35 @@ print_mem() {
 		free_pages=$(vmstat | awk 'NR==3 {print $5}')
 		free_mb=$((free_pages * PAGE_SIZE / 1024 / 1024))
 		used_mb=$((total_mb - free_mb))
-		printf 'Mem:%s/%sMB  ' "$used_mb" "$total_mb"
+		printf 'Memory: %s/%s MB | ' "$used_mb" "$total_mb"
 	else
-		printf 'Mem:n/a  '
+		printf 'Memory: N/A | '
 	fi
 }
 
 print_cpu() {
 	if [ "$OS" = "OpenBSD" ] && command -v iostat >/dev/null 2>&1; then
 		idle=$(iostat -C -c 2 2>/dev/null | awk 'NR==3 {print $NF}')
-		[ -n "$idle" ] && printf 'CPU:%s%%  ' "$((100 - idle))" || printf 'CPU:n/a  '
+		if [ -n "$idle" ]; then
+			printf 'CPU: %s%% used | ' "$((100 - idle))"
+		else
+			printf 'CPU: N/A | '
+		fi
 	else
-		printf 'CPU:n/a  '
+		printf 'CPU: N/A | '
 	fi
 }
 
 print_cpuspeed() {
 	if [ "$OS" = "OpenBSD" ] && command -v sysctl >/dev/null 2>&1; then
 		speed=$(sysctl -n hw.cpuspeed 2>/dev/null)
-		[ -n "$speed" ] && printf 'CPU:%sMHz  ' "$speed" || printf 'CPU:n/a  '
+		if [ -n "$speed" ]; then
+			printf 'CPU Freq: %s MHz | ' "$speed"
+		else
+			printf 'CPU Freq: N/A | '
+		fi
 	else
-		printf 'CPU:n/a  '
+		printf 'CPU Freq: N/A | '
 	fi
 }
 
@@ -46,15 +54,15 @@ print_bat() {
 		level=$(apm -l 2>/dev/null)
 		ac=$(apm -a 2>/dev/null)
 		if [ "$level" != "-1" ] && [ "$ac" != "-1" ]; then
-			[ "$ac" -eq 1 ] && printf 'AC:%s%%  ' "$level" || printf 'Bat:%s%%  ' "$level"
+			if [ "$ac" -eq 1 ]; then
+				printf 'Power: AC (%s%%)' "$level"
+			else
+				printf 'Battery: %s%%' "$level"
+			fi
 			return
 		fi
 	fi
-	printf 'Bat:n/a  '
-}
-
-print_date() {
-	date '+%A %d %B %H:%M'
+	printf 'Battery: N/A'
 }
 
 while :; do
@@ -62,7 +70,6 @@ while :; do
 	print_cpu
 	print_cpuspeed
 	print_bat
-	print_date
 	echo ""
 	sleep 2
 done

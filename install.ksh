@@ -119,6 +119,7 @@ create_directories() {
 
 install_spectrwm() {
 	log "Installing spectrwm configuration …"
+	rm -rf "$HOME/.config/spectrwm/*"
 	install -m 644 "$SCRIPT_DIR/.config/spectrwm/spectrwm.conf" "$HOME/.config/spectrwm/spectrwm.conf"
 	install -m 755 "$SCRIPT_DIR/.config/spectrwm/initscreen.ksh" "$SCRIPT_DIR/.config/spectrwm/baraction.ksh" \
 		"$SCRIPT_DIR/.config/spectrwm/screenshot.ksh" "$HOME/.config/spectrwm/"
