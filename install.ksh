@@ -135,6 +135,25 @@ install_session_files() {
 	install -m 644 "$SCRIPT_DIR/profile" "$HOME/.profile"
 }
 
+update_profile_home() {
+	profile_path="$HOME/.profile"
+
+	if [ ! -f "$profile_path" ]; then
+		warn "Profile file not found at $profile_path; skipping HOME update"
+		return
+	fi
+
+	tmp_profile=$(mktemp "${profile_path}.XXXXXX") || exit 1
+
+	if sed "s|^: \${HOME='[^']*'}|: \${HOME='$HOME'}|" "$profile_path" >"$tmp_profile"; then
+		mv "$tmp_profile" "$profile_path"
+	else
+		rm -f "$tmp_profile"
+		error "Failed to update HOME in $profile_path"
+		exit 1
+	fi
+}
+
 fix_ownership() {
 	if [ "$(id -u)" -eq 0 ]; then
 		log "Fixing ownership for $TARGET_USER…"
@@ -152,6 +171,7 @@ main() {
 	install_spectrwm
 	install_dunst
 	install_session_files
+	update_profile_home
 	fix_ownership
 
 	log "Installation complete."
