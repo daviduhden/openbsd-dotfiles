@@ -5,6 +5,7 @@ vim
 vifm
 ksh93
 spectrwm
+openbsd-backgrounds
 dmenu
 xlock
 xclip
