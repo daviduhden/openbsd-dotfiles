@@ -27,6 +27,7 @@ neomutt--gpgme-notmuch-sasl
 noto-emoji
 noto-fonts
 nsh--
+nsxiv
 openbsd-backgrounds
 pandoc
 pftop
