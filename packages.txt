@@ -5,15 +5,16 @@ bvi
 bzip2
 chromium
 cmatrix
+cmus
 curl
 dmenu
 dunst
 fastfetch
-flashrom
 git
 github-cli
 gnupg
 htop
+hw-probe
 iamb
 iftop
 irssi
