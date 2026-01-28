@@ -164,6 +164,11 @@ fix_ownership() {
 	fi
 }
 
+set_shell() {
+	log "Setting shell to ksh93 for $TARGET_USER …"
+	chsh -s /usr/local/bin/ksh93 "$TARGET_USER"
+}
+
 main() {
 	require_root
 	ask_target_user
@@ -175,10 +180,10 @@ main() {
 	install_session_files
 	update_profile_home
 	fix_ownership
+	set_shell
 
 	log "Installation complete."
 	log "Log out and log back in to start spectrwm."
-	log "Optional: change your shell with 'chsh -s /usr/local/bin/ksh93'"
 }
 
 main "$@"
