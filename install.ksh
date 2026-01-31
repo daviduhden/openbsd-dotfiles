@@ -132,6 +132,7 @@ install_dunst() {
 
 install_session_files() {
 	log "Installing session files …"
+	install -m 755 "$SCRIPT_DIR/xenodm/Xsetup_0.sh" "/etc/X11/xenodm/Xsetup_0"
 	install -m 755 "$SCRIPT_DIR/.xsession.ksh" "$HOME/.xsession"
 	install -m 755 "$SCRIPT_DIR/.Xresources" "$HOME/.Xresources"
 	install -m 644 "$SCRIPT_DIR/.profile.ksh" "$HOME/.profile"
