@@ -1,3 +1,5 @@
+#!/bin/ksh
+#
 # User profile for OpenBSD
 #
 # See the LICENSE file at the top of the project tree for copyright
@@ -7,18 +9,20 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/X11R6/bin:/usr/local/sbin:/usr/local/bin
 export PATH
 
 # Set HOME
-: ${HOME='/home/david'}
+: "${HOME:=/home/david}"
 export HOME
 
 # Set HOSTNAME
-: ${HOSTNAME:=$(uname -n)}
+if [ -z "${HOSTNAME:-}" ]; then
+	HOSTNAME=$(uname -n)
+fi
 export HOSTNAME
 
 # Pick prompt symbol
 if [ "$(id -u)" -eq 0 ]; then
-  PSCHAR='#'
+	PSCHAR='#'
 else
-  PSCHAR='$'
+	PSCHAR='$'
 fi
 
 # Prompt
@@ -44,12 +48,12 @@ umask 022
 
 # Only run this block for interactive shells
 case "$-" in
-*i*)    # interactive shell
-        alias vi='vim'
-        alias ksh='ksh93'
+*i*) # interactive shell
+	alias vi='vim'
+	alias ksh='ksh93'
 
-        if [ -x /usr/bin/tset ]; then
-                eval `/usr/bin/tset -IsQ '-munknown:?vt220' $TERM`
-        fi
-        ;;
+	if [ -x /usr/bin/tset ]; then
+		eval "$(/usr/bin/tset -IsQ '-munknown:?vt220' "$TERM")"
+	fi
+	;;
 esac

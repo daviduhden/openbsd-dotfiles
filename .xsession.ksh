@@ -71,4 +71,3 @@ xset s noblank
 # -------------------------------------------------
 
 exec spectrwm -c "$HOME/.config/spectrwm/spectrwm.conf"
-
