@@ -5,7 +5,8 @@
 # This script installs the OpenBSD dotfiles for a specified user.
 # It requires root (superuser) privileges to run.
 # It installs necessary packages,
-# configures doas, and sets up configuration files for spectrwm
+# configures doas, asks for the X keyboard layout (es or us),
+# and sets up configuration files for spectrwm
 # and dunst.
 #
 # See the LICENSE file at the top of the project tree for copyright
@@ -102,6 +103,42 @@ ask_target_user() {
 	log "Using HOME: $HOME"
 }
 
+ask_keyboard_layout() {
+	# A valid KEYBOARD_LAYOUT environment variable (es or us)
+	# preselects the layout for non-interactive use.
+	if [ -n "${KEYBOARD_LAYOUT:-}" ]; then
+		case "$KEYBOARD_LAYOUT" in
+		es | us)
+			log "Keyboard layout from environment: $KEYBOARD_LAYOUT"
+			return
+			;;
+		*)
+			error "Invalid KEYBOARD_LAYOUT '$KEYBOARD_LAYOUT' (must be 'es' or 'us')."
+			exit 1
+			;;
+		esac
+	fi
+
+	print "Select X keyboard layout:"
+	print "  1. Spanish - Spain (es) [default]"
+	print "  2. English - United States (us)"
+	print "Enter choice [1]: \c"
+	read -r choice
+	case "$choice" in
+	"" | 1 | es)
+		KEYBOARD_LAYOUT=es
+		;;
+	2 | us)
+		KEYBOARD_LAYOUT=us
+		;;
+	*)
+		error "Invalid keyboard layout selection: '$choice'"
+		exit 1
+		;;
+	esac
+	log "Keyboard layout selected: $KEYBOARD_LAYOUT"
+}
+
 configure_doas() {
 	if ! confirm "Grant $TARGET_USER persistent doas access as root?"; then
 		warn "Skipping doas configuration."
@@ -160,6 +197,7 @@ install_spectrwm() {
 	install -b -o "$TARGET_USER" -g "$TARGET_GROUP" -m 755 \
 		"$SCRIPT_DIR/.config/spectrwm/initscreen.ksh" \
 		"$SCRIPT_DIR/.config/spectrwm/screenshot.ksh" \
+		"$SCRIPT_DIR/.config/spectrwm/statusbar.ksh" \
 		"$HOME/.config/spectrwm/"
 }
 
@@ -180,6 +218,28 @@ install_session_files() {
 		"$SCRIPT_DIR/.Xresources" "$HOME/.Xresources"
 	install -b -o "$TARGET_USER" -g "$TARGET_GROUP" -m 644 \
 		"$SCRIPT_DIR/.profile.ksh" "$HOME/.profile"
+	apply_keyboard_layout
+}
+
+apply_keyboard_layout() {
+	# Rewrite the KEYBOARD_LAYOUT= line in ~/.xsession with the
+	# selected layout. The substitution replaces the single line,
+	# so re-running the installer never duplicates it.
+	xsess_tmp=$(mktemp /tmp/xsession.XXXXXX)
+	awk -v layout="$KEYBOARD_LAYOUT" '
+		/^KEYBOARD_LAYOUT=/ {
+			print "KEYBOARD_LAYOUT=" layout
+			next
+		}
+		{ print }
+	' "$HOME/.xsession" >"$xsess_tmp"
+	if ! grep -q "^KEYBOARD_LAYOUT=$KEYBOARD_LAYOUT\$" "$xsess_tmp"; then
+		warn "No KEYBOARD_LAYOUT= line found in ~/.xsession; layout not applied."
+	fi
+	chown "$TARGET_USER:$TARGET_GROUP" "$xsess_tmp"
+	chmod 755 "$xsess_tmp"
+	mv "$xsess_tmp" "$HOME/.xsession"
+	log "Keyboard layout '$KEYBOARD_LAYOUT' written to ~/.xsession"
 }
 
 set_shell() {
@@ -191,6 +251,7 @@ main() {
 	require_root
 	ask_target_user
 	configure_doas
+	ask_keyboard_layout
 	install_packages
 	create_directories
 	install_spectrwm

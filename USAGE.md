@@ -7,8 +7,10 @@ scripts it references, and the session files that surround it
 ([`.xsession`](.xsession.ksh)). Every shortcut listed here was taken from the
 configuration and cross-checked against the spectrwm compiled-in defaults.
 
-The configuration is written for OpenBSD/Xenocara with a Spanish (Spain)
-keyboard layout. Bindings that spectrwm provides by default and that this
+The configuration is written for OpenBSD/Xenocara. The installer offers a
+Spanish (Spain) keyboard layout (`es`, the default) and a US English layout
+(`us`); the selected XKB layout is stored in `~/.xsession` and applied with
+`setxkbmap`. Bindings that spectrwm provides by default and that this
 configuration does not change are explicitly marked as defaults.
 
 ## Overview
@@ -33,9 +35,11 @@ The general design of this setup:
   lock and screenshots (see [Application Launchers and Menus](#application-launchers-and-menus)).
 * **Menus:** `dmenu`, styled with the same Dracula-like colors and font as the
   rest of the desktop.
-* **Status bar:** enabled, at the bottom of every region, with a workspace
-  indicator on the left, the focused window title centered, and the date and
-  time on the right (see [Status Bar](#status-bar)).
+* **Status bar:** the native spectrwm bar, enabled and placed at the bottom
+  of every region, with the workspace indicator on the left, the focused
+  window title centered, and system status (CPU, memory, battery/AC,
+  network, throughput, Tor) plus the date and time on the right (see
+  [Status Bar](#status-bar)). There is no external bar such as Lemonbar.
 * **Startup:** spectrwm runs [`initscreen.ksh`](.config/spectrwm/initscreen.ksh)
   via `autorun` to configure displays with `xrandr`; the rest of the session
   (keyboard, X resources, wallpaper, notification daemon) is started by
@@ -52,8 +56,8 @@ The general design of this setup:
 * `Mod+Shift+Return` means: hold `Mod` and `Shift`, then press Enter.
 * `Button1` / `Button3` mean the left / right mouse buttons.
 
-The bindings assume a Spanish (Spain) keyboard. Several of them use keysym
-names that correspond to physical keys on that layout:
+The bindings use keysym names that correspond to physical keys on the
+Spanish (Spain) layout:
 
 | Keysym in the config | Physical key (Spanish layout)            |
 | -------------------- | ---------------------------------------- |
@@ -64,12 +68,20 @@ names that correspond to physical keys on that layout:
 | `plus`               | The `+`/`*` key, right of the grave key  |
 | `ccedilla`           | The cedilla key, where a US keyboard has `\` |
 
-The session enables the `es` layout with `nodeadkeys`
-(`setxkbmap es nodeadkeys` in [`.xsession`](.xsession.ksh)). Bindings that
-use the grave key are written with the `grave` keysym because under
-`nodeadkeys` that key reports `grave`; with the plain `es` layout (dead keys
-enabled) it reports `dead_grave` instead, which is why the old `dead_grave`
-bindings were replaced (see [Troubleshooting](#troubleshooting)).
+The installer stores the selected XKB layout in `~/.xsession` as
+`KEYBOARD_LAYOUT` (`es` or `us`), and the session applies it with
+`setxkbmap es nodeadkeys` or `setxkbmap us`. Bindings that use the grave
+key are written with the `grave` keysym because under `es nodeadkeys`
+that key reports `grave`; with the plain `es` layout (dead keys enabled)
+it reports `dead_grave` instead, which is why the old `dead_grave`
+bindings were replaced (see [Troubleshooting](#troubleshooting)). The
+`us` layout has no dead keys, so it is applied without a variant.
+
+On the `us` layout the bindings are still active, but several keysyms in
+the table above (`exclamdown`, `apostrophe` as used here, `masculine`,
+`ccedilla`) do not match any physical key, so those particular bindings
+simply do not fire. The letter-based bindings (`Mod+j`, `Mod+k`, `Mod+g`,
+`Mod+n` and so on) behave identically on both layouts.
 
 ## Essential Shortcuts
 
@@ -236,21 +248,66 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
 * **Format:** `bar_justify = center` with the three-section format
 
   ```
-  bar_format = +|2L +I:+D (+w) +|3C +W +|2R %Y-%m-%d %H:%M
+  bar_format = +|2L +I:+D (+w) +|3C +W +|4R +A  %Y-%m-%d %H:%M
   ```
 
-  * `+|2L` - left-justified section (weight 2): `+L` renders the workspace
-    list indicator (one marker per workspace, with current/urgent markers).
-  * `+I` - current workspace index, followed by `:+D` (a colon and the
-    workspace name, empty unless a workspace has been named) and
-    `(+w)` - the number of windows in the current workspace.
+  * `+|2L` - left-justified section (weight 2): `+I` renders the current
+    workspace index, followed by `:+D` (a colon and the workspace name,
+    empty unless a workspace has been named) and `(+w)` - the number of
+    windows in the current workspace.
   * `+|3C` - centered section (weight 3): `+W` renders the focused window's
     title.
-  * `+|2R` - right-justified section (weight 2): the literal
-    `%Y-%m-%d %H:%M` is expanded by `strftime(3)` into the date and time.
-    There is no `+A` component because no `bar_action` script is configured
-    (an earlier revision had one; its output slot was removed with it).
+  * `+|4R` - right-justified section (weight 4): `+A` renders the output of
+    the `bar_action` script (the system status fields listed below),
+    followed by the literal `%Y-%m-%d %H:%M`, which is expanded by
+    `strftime(3)` into the date and time. The format string is re-expanded
+    on every bar redraw, so the clock follows the refresh rate of the
+    status script.
+* **Status script:** `bar_action = ~/.config/spectrwm/statusbar.ksh`.
+  spectrwm starts the executable once and reads one status line from its
+  standard output per 2-second cycle (the script loops internally;
+  spectrwm 3.7 has no `bar_delay` option). The script prints, in order:
 
+  * `CPU nn%` - CPU usage averaged over the last interval, computed from
+    `kern.cp_time` deltas (all CPU states are summed and the last one,
+    idle, is subtracted, which stays correct across OpenBSD versions that
+    added CPU states). The first sample after startup and samples after
+    counter resets are omitted rather than showing a bogus percentage.
+  * `MEM u/G` - used and total memory. "used" is `hw.physmem` minus the
+    free-list size from the `fre` column of `vmstat` (which is printed in
+    MB with an `M` suffix; the column is located through the header).
+    This is an approximation that includes the file cache and inactive
+    pages. Machines with less than 1 GiB of RAM show MiB instead.
+  * `BAT nn%` - battery level from `apm -l`; shown as `AC nn%` while the
+    adapter is connected (`apm -a`). The field is omitted on machines
+    without APM support.
+  * `NET iface ssid ip` - the interface carrying the default route
+    (`netstat -rn`), its SSID for wireless interfaces, and its primary
+    IPv4 address. On IPv6-only links the first global IPv6 address is
+    shown (link-local `fe80::` and `::1` are skipped); `NET iface no ip`
+    when the interface has no address yet; `NET offline` when no
+    interface is up. Without a default route, the first interface that
+    reports `status: active` is used. If the default route points through
+    a tunnel-like interface (`tun`, `tap`, `wg`, `ppp`, `gif`, `gre`,
+    `pair` and friends), a physical interface is shown instead.
+  * `dn 2K up 1K` - throughput over the last interval, from the
+    `Ibytes`/`Obytes` columns of `netstat -nib -I` (with `-b`, those are
+    the last two columns of the link row). Units scale automatically
+    (`B`, `K`, `M`, `G`); one decimal is shown only for values below 10,
+    so exact powers of two print without a `.0`. Counter resets and
+    interface changes restart the baseline instead of showing a bogus
+    rate; the state lives in the script process itself, with no
+    temporary files.
+  * `TOR` - present only while `rcctl check tor` succeeds.
+
+  Refresh tiers: CPU and throughput are sampled every 2-second cycle;
+  memory, battery and network state every 5th cycle (10 s); Tor every
+  15th cycle (30 s). Every field comes from OpenBSD base utilities, is
+  plain ASCII, and is silently omitted when the underlying hardware,
+  interface or service is missing, so a desktop without a battery or
+  Wi-Fi produces no errors. Only the status line is written to stdout,
+  and because `bar_action_expand` is off, no character in the output
+  (such as an SSID containing `+@`) can be interpreted as bar markup.
 * **Colors** (semantics only; values are Dracula palette entries):
   * `bar_color` / `bar_color_unfocus` - bar background for the focused and
     unfocused regions; `bar_color_free` - bar background while a
@@ -311,7 +368,10 @@ What happens when the session starts, in order:
 2. After login, `xenodm` executes `~/.xsession` (installed from
    [`.xsession.ksh`](.xsession.ksh)):
    * exports the locale `es_ES.UTF-8` and XDG base directories;
-   * sets the keyboard layout with `setxkbmap es nodeadkeys`;
+   * applies the keyboard layout stored in the `KEYBOARD_LAYOUT` line
+     (`setxkbmap es nodeadkeys` or `setxkbmap us`); `install.ksh` writes
+     that line (`es` or `us`, default `es`) when installing and rewrites
+     it on every re-run;
    * merges [`~/.Xresources`](.Xresources) with `xrdb` (Dracula-like colors
      and xterm settings, including the Noto Sans Mono 10 font);
    * sets the root cursor to `left_ptr` with `xsetroot`;
@@ -346,6 +406,8 @@ These are used by the configuration and need no package installation:
   `xterm`, `xlock`, `xrandr`, `xrdb`, `setxkbmap`, `xsetroot`,
   `/bin/sh` and `/bin/ksh`, and the standard tools used by the scripts
   (`awk`, `grep`, `head`, `printf`, `date`, `mkdir`, `sleep`).
+  The status-bar script additionally uses only base commands: `sysctl`,
+  `vmstat`, `apm`, `ifconfig`, `netstat`, `rcctl` and `uname`.
 
 ### Packages (ports)
 
@@ -373,6 +435,7 @@ notifications when present and silently skips the notification otherwise.
 | File                                        | Purpose                                            |
 | ------------------------------------------- | -------------------------------------------------- |
 | [`.config/spectrwm/spectrwm.conf`](.config/spectrwm/spectrwm.conf) | Main spectrwm configuration: programs, bar, colors, `autorun`, `modkey` and all key bindings |
+| [`.config/spectrwm/statusbar.ksh`](.config/spectrwm/statusbar.ksh) | Status script run as `bar_action`; prints CPU, memory, battery, network, throughput and Tor status on staggered refresh tiers |
 | [`.config/spectrwm/screenshot.ksh`](.config/spectrwm/screenshot.ksh) | Screenshot helper called by the two screenshot bindings |
 | [`.config/spectrwm/initscreen.ksh`](.config/spectrwm/initscreen.ksh) | Display setup script run by spectrwm's `autorun` at start-of-day |
 | [`.xsession.ksh`](.xsession.ksh)            | X session script (installed as `~/.xsession`); starts the session and execs spectrwm |
@@ -400,7 +463,13 @@ noted:
   and the script [`.config/spectrwm/screenshot.ksh`](.config/spectrwm/screenshot.ksh)
   (output directory is set in the script).
 * **Bar:** `bar_enabled`, `bar_at_bottom`, `bar_font`, `bar_format`,
-  `bar_justify`, `bar_border_width`, `bar_padding_*`.
+  `bar_justify`, `bar_border_width`, `bar_padding_*`. The system status
+  fields are produced by
+  [`.config/spectrwm/statusbar.ksh`](.config/spectrwm/statusbar.ksh),
+  referenced by the `bar_action` line; edit that script (for example, to
+  change the refresh tiers or drop a field) and keep it executable.
+* **Keyboard layout:** the `KEYBOARD_LAYOUT=es` or `KEYBOARD_LAYOUT=us`
+  line in the installed `~/.xsession` (written by `install.ksh`).
 * **Colors:** the `bar_color*`, `bar_font_color*`, `bar_border*`,
   `color_focus`, `color_unfocus` and `color_urgent` directives. Terminal and
   notification colors live in [`.Xresources`](.Xresources) and
@@ -419,14 +488,21 @@ noted:
 
 Issues that can realistically arise from this specific configuration:
 
-* **`Mod+grave` / `Mod+Shift+grave` (move left/up) require `es nodeadkeys`.**
-  These bindings use the `grave` keysym because `.xsession` runs
-  `setxkbmap es nodeadkeys`. If the session is switched to the plain `es`
-  layout (dead keys enabled), the same key reports `dead_grave` and the
-  bindings are silently not registered; in that case the bindings would need
-  to use `dead_grave` instead. Diagnose with
+* **`Mod+grave` / `Mod+Shift+grave` (move left/up) require the grave key
+  to report `grave`.** These bindings use the `grave` keysym because
+  `.xsession` applies `es nodeadkeys`. Switching to the plain `es` variant
+  (dead keys enabled) makes the same key report `dead_grave` and the
+  bindings are silently not registered; in that case the bindings would
+  need to use `dead_grave` instead. On `us` the grave key is never dead,
+  so the bindings work regardless. Diagnose with
   `xmodmap -pke | grep -i grave` or with `xev` while pressing the key (see
   the runtime checks below).
+* **The bar shows no system status.** `statusbar.ksh` must be executable
+  (the installer sets mode 755) and reachable at
+  `~/.config/spectrwm/statusbar.ksh`. The script omits fields for missing
+  hardware on purpose; run it once in a terminal to see its output and
+  `stderr`. spectrwm logs `bar_action failed` to
+  `~/.xsession-errors` if the script cannot be executed at all.
 * **Launchers fail silently.** spectrwm spawns programs without a shell and
   only reports failures to its standard error (visible in
   `~/.xsession-errors` under xenodm). If `Mod+c`, `Mod+Shift+f` or
@@ -457,14 +533,16 @@ Issues that can realistically arise from this specific configuration:
 
 ### Runtime verification on OpenBSD
 
-The Spanish-layout bindings were checked statically against the compiled
+The layout-specific bindings were checked statically against the compiled
 `es nodeadkeys` XKB map, but verify them once on the real OpenBSD graphical
 session:
 
-1. `setxkbmap -query` - confirm `layout: es` and `variant: nodeadkeys`.
-2. `xmodmap -pk | grep -iE 'grave|plus|masculine|ccedilla|exclamdown|apostrophe'`
-   - check that the grave key, the `+` key, the key left of `1`, the cedilla
-   key and the two far-right number-row keys are mapped as expected.
+1. `setxkbmap -query` - confirm that `layout:` matches the value installed
+   in `~/.xsession` (`es` with `variant: nodeadkeys`, or `us`).
+2. On the `es` layout, `xmodmap -pk | grep -iE
+   'grave|plus|masculine|ccedilla|exclamdown|apostrophe'` - check that the
+   grave key, the `+` key, the key left of `1`, the cedilla key and the two
+   far-right number-row keys are mapped as expected.
 3. `xev`, then press each bound key while holding Mod4 and confirm the
    `keysym` line:
    * grave key (right of `p`) must report `grave` (0x60), not `dead_grave`;
@@ -474,6 +552,9 @@ session:
    * `g` and `n` must report plain `g` / `n` with Mod held.
 4. Confirm that `Mod+g` opens the workspace search and that
    `Mod+Shift+n` opens the workspace-name prompt.
+5. Run `ksh ~/.config/spectrwm/statusbar.ksh` in a terminal: it must print
+   one status line every 2 seconds without any error output, omitting
+   fields whose hardware is absent.
 
 ## Complete Key Binding Reference
 
@@ -531,10 +612,12 @@ the `MOD` alias, which is `Mod4` (Super/Windows key).
 | `Mod+Shift+apostrophe`         | Shrink window height (floating)     |
 
 The keys map to the Spanish physical layout as listed in
-[Key Conventions](#key-conventions). The two `grave` entries use the
-`grave` keysym (not `dead_grave`) because the session uses
-`es nodeadkeys`; they replace the default `focus_free` and `free_toggle`
-bindings, which this configuration re-assigns to the `masculine` key.
+[Key Conventions](#key-conventions). On the `us` layout the grave and
+`plus` bindings still match physical keys; `exclamdown` and `apostrophe`
+(as used here) do not. The two `grave` entries use the `grave` keysym (not
+`dead_grave`) because the session applies `es nodeadkeys`; they replace the
+default `focus_free` and `free_toggle` bindings, which this configuration
+re-assigns to the `masculine` key.
 
 ### Layouts and master area
 
@@ -586,10 +669,12 @@ part of this repository's configuration:
 * `Mod+-` / `Mod+Shift+-` - width shrink / height shrink (the `-` key is an
   unshifted key on the Spanish layout, so these two work); `Mod+=` /
   `Mod+Shift+=` - width grow / height grow (the `=` keysym exists only as
-  the shifted level of the `0` key, so these two do not match).
+  the shifted level of the `0` key, so these two do not match). On the
+  `us` layout both `-` and `=` are unshifted/shifted keys and all four
+  bindings fire.
 * `Mod+[` / `Mod+]` and shifted variants - move window (these also cannot
   fire on the Spanish layout, where the brackets only exist on AltGr
-  levels).
+  levels; on `us` they fire).
 * `Mod+Shift+comma` / `Mod+Shift+period` - add/remove columns or rows in
   the stacking area.
 * `Mod+Shift+space` - reset stacking.
@@ -614,7 +699,8 @@ Bindings whose defaults were replaced by this configuration:
   `Mod+Shift+masculine`.
 * The default `Mod+slash` (`search_workspace`) and
   `Mod+Shift+slash` (`name_workspace`) cannot fire on the Spanish layout
-  and are functionally replaced by `Mod+g` and `Mod+Shift+n`.
+  and are functionally replaced by `Mod+g` and `Mod+Shift+n`; on `us` the
+  slash defaults also fire and simply duplicate `Mod+g` / `Mod+Shift+n`.
 * The default `Mod+backslash` / `Mod+Shift+backslash` (`center_layout` /
   `flip_layout`) also cannot fire on the Spanish layout and are
   functionally replaced by `Mod+ccedilla` / `Mod+Shift+ccedilla`.

@@ -27,8 +27,19 @@ export XDG_DATA_HOME="$HOME/.local/share"
 # Keyboard
 # -------------------------------------------------
 
-# Spanish layout without dead keys
-setxkbmap es nodeadkeys
+# XKB layout, written by install.ksh (es or us). Keep the
+# KEYBOARD_LAYOUT= line intact so that re-running the installer
+# can update it.
+KEYBOARD_LAYOUT=es
+
+# nodeadkeys makes the grave key report 'grave' instead of
+# 'dead_grave', which the spectrwm move bindings rely on. The US
+# layout has no dead keys, so it is set without a variant.
+if [ "$KEYBOARD_LAYOUT" = es ]; then
+	setxkbmap es nodeadkeys
+else
+	setxkbmap us
+fi
 
 # -------------------------------------------------
 # X resources
