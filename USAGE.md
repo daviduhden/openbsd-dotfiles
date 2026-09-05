@@ -316,9 +316,33 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
   For debugging and testing, `statusbar.pl` accepts an optional
   iteration count (`statusbar.pl 5` runs five cycles and exits) and
   honors `STATUSBAR_INTERVAL` (seconds, fractional allowed) to override
-  the 2-second cycle. pledge(2)/unveil(2) are not applied because the
-  base Perl does not expose them; `OpenBSD::Pledge` from ports could be
-  used if desired.
+  the 2-second cycle.
+
+* **Sandbox:** on OpenBSD the three helper scripts restrict themselves
+  with base Perl's `OpenBSD::Pledge` and `OpenBSD::Unveil` modules (the
+  XS interfaces to `pledge(2)`/`unveil(2)`; no extra packages):
+
+  * `statusbar.pl` - `unveil`: the data-gathering executables (`x`), the
+    apm socket `/var/run/apmdev` (`w`) and device `/dev/apm` (`r`), the
+    rcctl(8) Tor-check chain (`/usr/sbin/rcctl` `rx`, `/bin/ksh` `x`,
+    `/etc/rc.d/tor` `rx`, `/etc/rc.d/rc.subr`/`/etc/rc.conf`/`local` `r`,
+    `grep`/`id`/`pgrep` `x`), the dynamic linker `rx` and `/usr/lib` `r`.
+    `pledge`: `proc exec` (plus implied `stdio`).
+  * `initscreen.pl` - `unveil`: `xrandr` (`x`), the Xauthority file
+    (`r`), `/tmp/.X11-unix` (`w`), the dynamic linker `rx`,
+    `/usr/lib`/`/usr/X11R6/lib` `r`. `pledge`: `proc exec`.
+  * `screenshot.pl` - `unveil`: `scrot` and `notify-send` (`x`), the
+    screenshot directory (`rwc`), the Xauthority file (`r`),
+    `/tmp/.X11-unix` (`w`), the dynamic linker `rx` and the shared
+    library directories `r`. `pledge`: `proc exec`.
+
+  Children are exec'd without `execpromises`, so they run unpledged and
+  only the parent needs `proc`/`exec`. unveil is locked before the main
+  work and a failing `pledge`/`unveil` call kills the script with an
+  explicit error (never silently ignored); diagnose with `ktrace(1)` or
+  the `U` flag in `lastcomm(1)`. X11 access assumes the default xenodm
+  setup with a local unix socket; a TCP `DISPLAY` will not work under
+  the sandbox.
 * **Colors** (semantics only; values are Dracula palette entries):
   * `bar_color` / `bar_color_unfocus` - bar background for the focused and
     unfocused regions; `bar_color_free` - bar background while a
@@ -418,9 +442,11 @@ These are used by the configuration and need no package installation:
   `/bin/sh` and `/bin/ksh`, and the standard tools used by the scripts
   (`awk`, `grep`, `head`, `printf`, `date`, `mkdir`, `sleep`).
   The spectrwm helper scripts are Perl (`/usr/bin/perl`, base system)
-  and parse all command output themselves. The status-bar script
-  additionally uses only base commands: `sysctl`, `vmstat`, `apm`,
-  `ifconfig`, `netstat`, `rcctl` and `uname`.
+  and parse all command output themselves; on OpenBSD they sandbox
+  themselves with the `OpenBSD::Pledge` and `OpenBSD::Unveil` modules
+  shipped with base Perl. The status-bar script additionally uses only
+  base commands: `sysctl`, `vmstat`, `apm`, `ifconfig`, `netstat` and
+  `rcctl`.
 
 ### Packages (ports)
 

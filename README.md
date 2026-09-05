@@ -58,6 +58,14 @@ refresh tiers (CPU and throughput every 2 seconds, the rest every 10 to 30
 seconds), using only OpenBSD base utilities. There is no external bar:
 Lemonbar is neither installed nor started.
 
+On OpenBSD, the spectrwm helper scripts (`statusbar.pl`, `initscreen.pl`,
+`screenshot.pl`) sandbox themselves with `pledge(2)`/`unveil(2)` through
+the `OpenBSD::Pledge` and `OpenBSD::Unveil` modules shipped with base
+Perl: they unveil only the executables, devices and files each script
+demonstrably needs, lock unveil, and pledge `proc exec` (plus the
+implied `stdio`). A failing `pledge`/`unveil` call aborts the script
+with an explicit error rather than being ignored.
+
 The spectrwm clipboard command explicitly uses `sh -c` because spectrwm executes configured programs directly and does not interpret a pipeline itself. Screenshots use `Mod4+Print` for all monitors and `Mod4+Shift+Print` for an interactive selection.
 
 The configuration assumes the package prefix `/usr/local`. Dunst uses its recursive Freedesktop icon lookup with the `hicolor` theme instead of a Linux-specific `/usr/share/icons` path.
