@@ -27,12 +27,12 @@ PASSES=0
 FAILS=0
 
 ok() {
-	((PASSES=PASSES + 1))
+	((PASSES = PASSES + 1))
 	print "ok - $1"
 }
 
 notok() {
-	((FAILS=FAILS + 1))
+	((FAILS = FAILS + 1))
 	print "FAIL - $1"
 }
 
@@ -1119,16 +1119,16 @@ EOF
 	export TARGET_USER TARGET_GROUP
 	ksh "$TESTDIR/apply.ksh" us
 	ksh "$TESTDIR/apply.ksh" us
-	if [ "$(grep -c '^KEYBOARD_LAYOUT=' "$TESTDIR/.xsession")" -eq 1 ] \
-		&& grep -q '^KEYBOARD_LAYOUT=us$' "$TESTDIR/.xsession"; then
+	if [ "$(grep -c '^KEYBOARD_LAYOUT=' "$TESTDIR/.xsession")" -eq 1 ] &&
+		grep -q '^KEYBOARD_LAYOUT=us$' "$TESTDIR/.xsession"; then
 		ok "keyboard: repeated install with us stays idempotent"
 	else
 		notok "keyboard: repeated install with us stays idempotent"
 	fi
 	ksh "$TESTDIR/apply.ksh" es
-	if [ "$(grep -c '^KEYBOARD_LAYOUT=' "$TESTDIR/.xsession")" -eq 1 ] \
-		&& grep -q '^KEYBOARD_LAYOUT=es$' "$TESTDIR/.xsession" \
-		&& [ "$(grep -c 'setxkbmap' "$TESTDIR/.xsession")" -eq 2 ]; then
+	if [ "$(grep -c '^KEYBOARD_LAYOUT=' "$TESTDIR/.xsession")" -eq 1 ] &&
+		grep -q '^KEYBOARD_LAYOUT=es$' "$TESTDIR/.xsession" &&
+		[ "$(grep -c 'setxkbmap' "$TESTDIR/.xsession")" -eq 2 ]; then
 		ok "keyboard: switching to es replaces the line, no duplicates"
 	else
 		notok "keyboard: switching to es replaces the line, no duplicates"

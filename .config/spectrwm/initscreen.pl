@@ -25,7 +25,7 @@ open my $fh, '-|', 'xrandr', '--query' or exit 0;
 close $fh;
 
 my @connected;
-for my $line (split("\n", $out)) {
+for my $line ( split( "\n", $out ) ) {
     push @connected, $1 if $line =~ /^(\S+) connected/;
 }
 exit 0 unless @connected;
@@ -34,7 +34,7 @@ exit 0 unless @connected;
 my $internal;
 for my $candidate (@candidates) {
     for my $output (@connected) {
-        if ($output eq $candidate) {
+        if ( $output eq $candidate ) {
             $internal = $candidate;
             last;
         }
@@ -49,15 +49,15 @@ $internal = $connected[0] unless defined $internal;
 # Choose the first other connected output as external
 my $external;
 for my $output (@connected) {
-    if ($output ne $internal) {
+    if ( $output ne $internal ) {
         $external = $output;
         last;
     }
 }
 
-system('xrandr', '--output', $internal, '--auto');
+system( 'xrandr', '--output', $internal, '--auto' );
 
-if (defined $external) {
-    system('xrandr', '--output', $external, '--auto',
-        '--right-of', $internal);
+if ( defined $external ) {
+    system( 'xrandr', '--output', $external, '--auto',
+        '--right-of', $internal );
 }
