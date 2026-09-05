@@ -40,13 +40,14 @@ The general design of this setup:
   window title centered, and system status (CPU, memory, battery/AC,
   network, throughput, Tor) plus the date and time on the right (see
   [Status Bar](#status-bar)). There is no external bar such as Lemonbar.
-* **Startup:** spectrwm runs [`initscreen.ksh`](.config/spectrwm/initscreen.ksh)
+* **Startup:** spectrwm runs [`initscreen.pl`](.config/spectrwm/initscreen.pl)
   via `autorun` to configure displays with `xrandr`; the rest of the session
   (keyboard, X resources, wallpaper, notification daemon) is started by
   [`.xsession`](.xsession.ksh) before spectrwm is executed.
 * **External tools in use:** `dmenu`, `xterm`, `xlock`, `xclip`, `scrot`,
-  `vifm`, `chromium` (as `chrome`), `xrandr`, `dunst` and
-  `openbsd-wallpaper`.
+  `vifm`, `chromium` (as `chrome`), `xrandr`, `dunst`,
+  `openbsd-wallpaper`, and the base `/usr/bin/perl` interpreter used by
+  the spectrwm helper scripts.
 
 ## Key Conventions
 
@@ -177,10 +178,10 @@ are unchanged; see [Mouse Behavior](#mouse-behavior).
   every workspace starts in the default vertical stack layout.
 * **Application-to-workspace rules:** none are configured (no `quirk`
   entries). The only workspace-related automation is the `autorun` entry that
-  launches `initscreen.ksh` with the `ws[-1]` free-mode specifier (see
+  launches `initscreen.pl` with the `ws[-1]` free-mode specifier (see
   [Startup](#startup)).
 * **Multi-monitor behavior:** each connected monitor is one region (the
-  default; no `region` lines are configured). `initscreen.ksh` places the
+  default; no `region` lines are configured). `initscreen.pl` places the
   first external output to the right of the internal panel at startup, so the
   desktop extends across both screens. The default keypad bindings for
   regions (`Mod+KP_1` ... `Mod+KP_9`, `Mod+Shift+KP_1` ... `Mod+Shift+KP_9`)
@@ -222,11 +223,11 @@ invoked with the listed bindings:
 | `Mod+Shift+f`      | `fileman` | `xterm -e vifm`                                 | File manager; needs `vifm` (package) |
 | `Mod+Shift+l`      | `lock`  | `xlock`                                          | Lock screen; `xlock` is Xenocara base |
 | `Mod+Shift+c`      | `clip`  | `sh -c 'xclip -selection primary -o \| xclip -selection clipboard'` | Copies the PRIMARY selection to the clipboard; needs `xclip` (package). `sh -c` is required because spectrwm executes programs directly and does not interpret the pipeline itself |
-| `Mod+Print`        | `screenshot_all` | `ksh ~/.config/spectrwm/screenshot.ksh full` | Full screenshot; see [screenshot.ksh](.config/spectrwm/screenshot.ksh) |
-| `Mod+Shift+Print`  | `screenshot_wind` | `ksh ~/.config/spectrwm/screenshot.ksh window` | Interactive selection screenshot; same script |
+| `Mod+Print`        | `screenshot_all` | `~/.config/spectrwm/screenshot.pl full` | Full screenshot; see [screenshot.pl](.config/spectrwm/screenshot.pl) |
+| `Mod+Shift+Print`  | `screenshot_wind` | `~/.config/spectrwm/screenshot.pl window` | Interactive selection screenshot; same script |
 
 The two screenshot bindings run
-[`.config/spectrwm/screenshot.ksh`](.config/spectrwm/screenshot.ksh), which
+[`.config/spectrwm/screenshot.pl`](.config/spectrwm/screenshot.pl), which
 requires `scrot`, saves PNGs to `~/Pictures/Screenshots/`, and shows a
 notification through `notify-send` when that command exists.
 
@@ -263,10 +264,13 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     `strftime(3)` into the date and time. The format string is re-expanded
     on every bar redraw, so the clock follows the refresh rate of the
     status script.
-* **Status script:** `bar_action = ~/.config/spectrwm/statusbar.ksh`.
-  spectrwm starts the executable once and reads one status line from its
-  standard output per 2-second cycle (the script loops internally;
-  spectrwm 3.7 has no `bar_delay` option). The script prints, in order:
+* **Status script:** `bar_action = ~/.config/spectrwm/statusbar.pl`.
+  A single persistent Perl process (base `/usr/bin/perl`): spectrwm
+  starts it once and reads one status line from its standard output per
+  2-second cycle (the script loops internally; spectrwm 3.7 has no
+  `bar_delay` option). All text processing happens inside Perl; the only
+  external processes are the base commands that provide the data. The
+  script prints, in order:
 
   * `CPU nn%` - CPU usage averaged over the last interval, computed from
     `kern.cp_time` deltas (all CPU states are summed and the last one,
@@ -308,6 +312,13 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
   Wi-Fi produces no errors. Only the status line is written to stdout,
   and because `bar_action_expand` is off, no character in the output
   (such as an SSID containing `+@`) can be interpreted as bar markup.
+
+  For debugging and testing, `statusbar.pl` accepts an optional
+  iteration count (`statusbar.pl 5` runs five cycles and exits) and
+  honors `STATUSBAR_INTERVAL` (seconds, fractional allowed) to override
+  the 2-second cycle. pledge(2)/unveil(2) are not applied because the
+  base Perl does not expose them; `OpenBSD::Pledge` from ports could be
+  used if desired.
 * **Colors** (semantics only; values are Dracula palette entries):
   * `bar_color` / `bar_color_unfocus` - bar background for the focused and
     unfocused regions; `bar_color_free` - bar background while a
@@ -352,7 +363,7 @@ This configuration defines no application-specific rules:
 * no `region` lines (one region per monitor).
 
 The only workspace-related automation is the `autorun` entry
-(`ws[-1]:ksh ~/.config/spectrwm/initscreen.ksh`), which uses spectrwm's
+(`ws[-1]:~/.config/spectrwm/initscreen.pl`), which uses spectrwm's
 special workspace index `-1` (free mode: windows stay always mapped); since
 that script only runs `xrandr` and creates no windows, the free-mode aspect
 has no visible effect. If per-application behavior is ever needed, add
@@ -383,8 +394,8 @@ What happens when the session starts, in order:
    * `exec`s spectrwm with this repository's configuration:
      `spectrwm -c "$HOME/.config/spectrwm/spectrwm.conf"`.
 3. spectrwm itself runs one `autorun` entry:
-   `ws[-1]:ksh ~/.config/spectrwm/initscreen.ksh`, which executes
-   [`.config/spectrwm/initscreen.ksh`](.config/spectrwm/initscreen.ksh).
+   `ws[-1]:~/.config/spectrwm/initscreen.pl`, which executes
+   [`.config/spectrwm/initscreen.pl`](.config/spectrwm/initscreen.pl).
    That script uses `xrandr` to enable the internal panel (any of
    `eDP`, `eDP-1`, `eDP-0`, `LVDS`, `LVDS-1`, `LVDS-0`, otherwise the first
    connected output) and places the first other connected output to its
@@ -406,8 +417,10 @@ These are used by the configuration and need no package installation:
   `xterm`, `xlock`, `xrandr`, `xrdb`, `setxkbmap`, `xsetroot`,
   `/bin/sh` and `/bin/ksh`, and the standard tools used by the scripts
   (`awk`, `grep`, `head`, `printf`, `date`, `mkdir`, `sleep`).
-  The status-bar script additionally uses only base commands: `sysctl`,
-  `vmstat`, `apm`, `ifconfig`, `netstat`, `rcctl` and `uname`.
+  The spectrwm helper scripts are Perl (`/usr/bin/perl`, base system)
+  and parse all command output themselves. The status-bar script
+  additionally uses only base commands: `sysctl`, `vmstat`, `apm`,
+  `ifconfig`, `netstat`, `rcctl` and `uname`.
 
 ### Packages (ports)
 
@@ -419,7 +432,7 @@ All of these appear in [`packages.txt`](packages.txt) unless noted:
 * `chromium` - provides the `chrome` binary used by `Mod+c`.
 * `vifm` - file manager used by `Mod+Shift+f`.
 * `xclip` - clipboard helper used by `Mod+Shift+c`.
-* `scrot` - screenshot backend used by `screenshot.ksh`.
+* `scrot` - screenshot backend used by `screenshot.pl`.
 * `noto-fonts` - the `Noto Sans Mono` font used by the bar, dmenu and xterm.
 * `dunst` - notification daemon (optional at runtime; started from
   `.xsession` only when installed).
@@ -427,7 +440,7 @@ All of these appear in [`packages.txt`](packages.txt) unless noted:
   runtime; started from `.xsession` only when installed).
 
 Optional and not listed in `packages.txt`: the `libnotify` package, which
-provides `notify-send`; `screenshot.ksh` uses it for post-screenshot
+provides `notify-send`; `screenshot.pl` uses it for post-screenshot
 notifications when present and silently skips the notification otherwise.
 
 ## Configuration Files
@@ -435,9 +448,9 @@ notifications when present and silently skips the notification otherwise.
 | File                                        | Purpose                                            |
 | ------------------------------------------- | -------------------------------------------------- |
 | [`.config/spectrwm/spectrwm.conf`](.config/spectrwm/spectrwm.conf) | Main spectrwm configuration: programs, bar, colors, `autorun`, `modkey` and all key bindings |
-| [`.config/spectrwm/statusbar.ksh`](.config/spectrwm/statusbar.ksh) | Status script run as `bar_action`; prints CPU, memory, battery, network, throughput and Tor status on staggered refresh tiers |
-| [`.config/spectrwm/screenshot.ksh`](.config/spectrwm/screenshot.ksh) | Screenshot helper called by the two screenshot bindings |
-| [`.config/spectrwm/initscreen.ksh`](.config/spectrwm/initscreen.ksh) | Display setup script run by spectrwm's `autorun` at start-of-day |
+| [`.config/spectrwm/statusbar.pl`](.config/spectrwm/statusbar.pl) | Status script run as `bar_action`; prints CPU, memory, battery, network, throughput and Tor status on staggered refresh tiers |
+| [`.config/spectrwm/screenshot.pl`](.config/spectrwm/screenshot.pl) | Screenshot helper called by the two screenshot bindings |
+| [`.config/spectrwm/initscreen.pl`](.config/spectrwm/initscreen.pl) | Display setup script run by spectrwm's `autorun` at start-of-day |
 | [`.xsession.ksh`](.xsession.ksh)            | X session script (installed as `~/.xsession`); starts the session and execs spectrwm |
 | [`.Xresources`](.Xresources)                | Dracula-like colors and xterm settings (font, no scrollbar, save lines) |
 | [`.config/dunst/dunstrc`](.config/dunst/dunstrc) | Notification daemon configuration, matching Dracula theme |
@@ -460,12 +473,12 @@ noted:
 * **Browser / file manager / lock / clipboard:** `program[browser]`,
   `program[fileman]`, `program[lock]`, `program[clip]`.
 * **Screenshots:** `program[screenshot_all]` / `program[screenshot_wind]`
-  and the script [`.config/spectrwm/screenshot.ksh`](.config/spectrwm/screenshot.ksh)
+  and the script [`.config/spectrwm/screenshot.pl`](.config/spectrwm/screenshot.pl)
   (output directory is set in the script).
 * **Bar:** `bar_enabled`, `bar_at_bottom`, `bar_font`, `bar_format`,
   `bar_justify`, `bar_border_width`, `bar_padding_*`. The system status
   fields are produced by
-  [`.config/spectrwm/statusbar.ksh`](.config/spectrwm/statusbar.ksh),
+  [`.config/spectrwm/statusbar.pl`](.config/spectrwm/statusbar.pl),
   referenced by the `bar_action` line; edit that script (for example, to
   change the refresh tiers or drop a field) and keep it executable.
 * **Keyboard layout:** the `KEYBOARD_LAYOUT=es` or `KEYBOARD_LAYOUT=us`
@@ -497,9 +510,9 @@ Issues that can realistically arise from this specific configuration:
   so the bindings work regardless. Diagnose with
   `xmodmap -pke | grep -i grave` or with `xev` while pressing the key (see
   the runtime checks below).
-* **The bar shows no system status.** `statusbar.ksh` must be executable
+* **The bar shows no system status.** `statusbar.pl` must be executable
   (the installer sets mode 755) and reachable at
-  `~/.config/spectrwm/statusbar.ksh`. The script omits fields for missing
+  `~/.config/spectrwm/statusbar.pl`. The script omits fields for missing
   hardware on purpose; run it once in a terminal to see its output and
   `stderr`. spectrwm logs `bar_action failed` to
   `~/.xsession-errors` if the script cannot be executed at all.
@@ -508,19 +521,19 @@ Issues that can realistically arise from this specific configuration:
   `~/.xsession-errors` under xenodm). If `Mod+c`, `Mod+Shift+f` or
   `Mod+Shift+c` do nothing, check the package is installed:
   `command -v chrome vifm xclip scrot dmenu_run`.
-* **Screenshots do not work.** `screenshot.ksh` requires `scrot` and must be
-  executable (`chmod +x ~/.config/spectrwm/screenshot.ksh`; the installer
+* **Screenshots do not work.** `screenshot.pl` requires `scrot` and must be
+  executable (`chmod +x ~/.config/spectrwm/screenshot.pl`; the installer
   sets mode 755). Output goes to `~/Pictures/Screenshots/`. The
   post-screenshot notification only appears when `notify-send` (package
   `libnotify`) is installed.
 * **`Mod+Shift+i` does nothing useful.** It is a spectrwm default
   (`initscr`) that runs an `initscreen.sh` script which is not installed in
   this repository; this setup's equivalent is
-  [`initscreen.ksh`](.config/spectrwm/initscreen.ksh), run via `autorun`.
+  [`initscreen.pl`](.config/spectrwm/initscreen.pl), run via `autorun`.
   Rebinding or unbinding the default is safe.
 * **External monitor not enabled after restart.** `autorun` entries only run
-  at start-of-day, so `Mod+q` does not re-run `initscreen.ksh`. Run
-  `ksh ~/.config/spectrwm/initscreen.ksh` manually or log out and back in.
+  at start-of-day, so `Mod+q` does not re-run `initscreen.pl`. Run
+  `~/.config/spectrwm/initscreen.pl` manually or log out and back in.
 * **"unknown option" warnings when starting spectrwm from a terminal.**
   `bar_padding_horizontal` / `bar_padding_vertical` are only understood by
   spectrwm 3.7 or newer; older OpenBSD packages log them as unknown options
@@ -552,9 +565,9 @@ session:
    * `g` and `n` must report plain `g` / `n` with Mod held.
 4. Confirm that `Mod+g` opens the workspace search and that
    `Mod+Shift+n` opens the workspace-name prompt.
-5. Run `ksh ~/.config/spectrwm/statusbar.ksh` in a terminal: it must print
-   one status line every 2 seconds without any error output, omitting
-   fields whose hardware is absent.
+5. Run `~/.config/spectrwm/statusbar.pl 3` in a terminal: it must print
+   three status lines without any error output, omitting fields whose
+   hardware is absent.
 
 ## Complete Key Binding Reference
 
@@ -571,8 +584,8 @@ the `MOD` alias, which is `Mod4` (Super/Windows key).
 | `Mod+Shift+f`       | File manager (`fileman`)            | `xterm -e vifm`                                |
 | `Mod+Shift+l`       | Lock screen (`lock`)                | `xlock`                                        |
 | `Mod+Shift+c`       | Copy PRIMARY to clipboard (`clip`)  | `sh -c 'xclip -selection primary -o \| xclip -selection clipboard'` |
-| `Mod+Print`         | Screenshot all monitors             | `ksh ~/.config/spectrwm/screenshot.ksh full`   |
-| `Mod+Shift+Print`   | Screenshot selection (`window` mode)| `ksh ~/.config/spectrwm/screenshot.ksh window` |
+| `Mod+Print`         | Screenshot all monitors             | `~/.config/spectrwm/screenshot.pl full`   |
+| `Mod+Shift+Print`   | Screenshot selection (`window` mode)| `~/.config/spectrwm/screenshot.pl window` |
 
 ### Window management
 

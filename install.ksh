@@ -195,9 +195,9 @@ install_spectrwm() {
 		"$SCRIPT_DIR/.config/spectrwm/spectrwm.conf" \
 		"$HOME/.config/spectrwm/spectrwm.conf"
 	install -b -o "$TARGET_USER" -g "$TARGET_GROUP" -m 755 \
-		"$SCRIPT_DIR/.config/spectrwm/initscreen.ksh" \
-		"$SCRIPT_DIR/.config/spectrwm/screenshot.ksh" \
-		"$SCRIPT_DIR/.config/spectrwm/statusbar.ksh" \
+		"$SCRIPT_DIR/.config/spectrwm/initscreen.pl" \
+		"$SCRIPT_DIR/.config/spectrwm/screenshot.pl" \
+		"$SCRIPT_DIR/.config/spectrwm/statusbar.pl" \
 		"$HOME/.config/spectrwm/"
 }
 

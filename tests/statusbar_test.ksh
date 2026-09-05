@@ -52,27 +52,26 @@ reset_mocks() {
 EOF
 }
 
-# run the status script for six cycles under the mock PATH
+# run the status script for six cycles under the mock PATH;
+# $1 is the cycle interval in seconds
 run_bar() {
-	cp "$SRC/.config/spectrwm/statusbar.ksh" "$TESTDIR/bar.ksh"
+	cp "$SRC/.config/spectrwm/statusbar.pl" "$TESTDIR/bar.pl"
 	sed -i \
-		-e "s|^PATH=/bin:/sbin:/usr/bin:/usr/sbin|PATH=$MOCK:/bin:/sbin:/usr/bin:/usr/sbin|" \
-		-e 's/^while :; do/for __i in 1 2 3 4 5 6; do/' \
-		-e 's/^	sleep 2$/	sleep 0.1/' \
-		"$TESTDIR/bar.ksh"
-	ksh "$TESTDIR/bar.ksh" >"$TESTDIR/out" 2>"$TESTDIR/err"
+		-e "s|^\\\$ENV{PATH} = .*|\\\$ENV{PATH} = '$MOCK:/bin:/sbin:/usr/bin:/usr/sbin';|" \
+		"$TESTDIR/bar.pl"
+	STATUSBAR_INTERVAL=$1 perl "$TESTDIR/bar.pl" 6 \
+		>"$TESTDIR/out" 2>"$TESTDIR/err"
 }
 
 # run the status script with /etc/rc.d/tor redirected (for Tor tests)
 run_bar_tor() {
-	cp "$SRC/.config/spectrwm/statusbar.ksh" "$TESTDIR/bar.ksh"
+	cp "$SRC/.config/spectrwm/statusbar.pl" "$TESTDIR/bar.pl"
 	sed -i \
-		-e "s|^PATH=/bin:/sbin:/usr/bin:/usr/sbin|PATH=$MOCK:/bin:/sbin:/usr/bin:/usr/sbin|" \
-		-e "s|/etc/rc.d/tor|$TESTDIR/rc.d/tor|" \
-		-e 's/^while :; do/for __i in 1 2 3 4 5 6; do/' \
-		-e 's/^	sleep 2$/	sleep 0.1/' \
-		"$TESTDIR/bar.ksh"
-	ksh "$TESTDIR/bar.ksh" >"$TESTDIR/out" 2>"$TESTDIR/err"
+		-e "s|^\\\$ENV{PATH} = .*|\\\$ENV{PATH} = '$MOCK:/bin:/sbin:/usr/bin:/usr/sbin';|" \
+		-e "s|/etc/rc.d/\\\$svc|$TESTDIR/rc.d/\\\$svc|" \
+		"$TESTDIR/bar.pl"
+	STATUSBAR_INTERVAL=0.1 perl "$TESTDIR/bar.pl" 6 \
+		>"$TESTDIR/out" 2>"$TESTDIR/err"
 }
 
 line() { # line number -> contents
@@ -161,11 +160,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_lacks 1 "CPU" "first sample shows no CPU percentage"
 	expect_line_contains 2 "CPU 80%" "CPU delta is computed correctly"
 	expect_stderr_empty
@@ -198,11 +193,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_no_line_contains "CPU" "zero delta never shows a CPU percentage"
 	expect_stderr_empty
 }
@@ -248,11 +239,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_lacks 1 "CPU" "reset: first line has no CPU"
 	expect_line_lacks 2 "CPU" "reset: decreased counters show no bogus CPU"
 	expect_line_contains 3 "CPU 80%" "reset: CPU recovers after the reset"
@@ -286,11 +273,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_no_line_contains "CPU" "malformed cp_time shows no CPU"
 	expect_stderr_empty
 }
@@ -330,11 +313,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "MEM 7.2G/8G" "memory shows used/total in GiB"
 	expect_stderr_empty
 }
@@ -371,11 +350,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "MEM 412M/512M" "memory shows MiB on small machines"
 	expect_stderr_empty
 }
@@ -412,11 +387,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_no_line_contains "MEM" "unsuffixed fre values are rejected, not misread"
 	expect_stderr_empty
 }
@@ -457,11 +428,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "NET offline" "no interfaces shows NET offline"
 	expect_no_line_contains "dn " "offline: no throughput field"
 	expect_stderr_empty
@@ -507,11 +474,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "NET em0 192.0.2.10" "wired interface with IPv4 address"
 	expect_stderr_empty
 }
@@ -555,11 +518,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "NET em0 2001:db8::10" "IPv6-only interface shows global address"
 	expect_line_lacks 1 "fe80" "link-local IPv6 is not displayed"
 	expect_stderr_empty
@@ -604,11 +563,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "NET iwm0 My Home Net 10.0.0.2" "quoted SSID with spaces is kept whole"
 	expect_stderr_empty
 }
@@ -660,11 +615,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "NET em0 192.0.2.10" "tunnel default route falls back to physical interface"
 	expect_line_lacks 1 "tun0" "tunnel interface is not displayed"
 	expect_stderr_empty
@@ -718,16 +669,11 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-S=$STATE/dt
-t=$(cat "$S" 2>/dev/null || echo 1000)
-echo "$t"
-echo $((t + 2)) >"$S"
-EOF
-	run_bar
+	# real elapsed time is used for the rates (Perl's time()),
+	# so the cycle interval must exceed one second
+	run_bar 1.5
 	expect_line_lacks 1 "dn " "throughput: first sample is omitted"
-	expect_line_contains 2 "dn 2K up 1K" "throughput rates scale to K"
+	expect_line_contains 2 "dn [0-9].*K up [0-9].*K" "throughput rates scale to K"
 	expect_stderr_empty
 }
 
@@ -782,14 +728,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-S=$STATE/dt
-t=$(cat "$S" 2>/dev/null || echo 1000)
-echo "$t"
-echo $((t + 2)) >"$S"
-EOF
-	run_bar
+	run_bar 1.5
 	expect_line_lacks 2 "dn " "throughput: decreased counters show no rate"
 	expect_line_contains 3 "dn " "throughput: rate recovers after the reset"
 	expect_stderr_empty
@@ -828,11 +767,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_no_line_contains "BAT\|AC " "no battery: no BAT/AC field"
 	expect_stderr_empty
 }
@@ -870,11 +805,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "BAT 72%" "battery on battery power"
 	expect_stderr_empty
 }
@@ -912,11 +843,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "AC 93%" "charging shows AC state"
 	expect_stderr_empty
 }
@@ -953,10 +880,6 @@ EOF
 	mockcmd rcctl <<'EOF'
 #!/bin/sh
 echo rcctl-called >$STATE/rcctl-mark
-exit 1
-EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
 exit 1
 EOF
 	rm -f "$TESTDIR/rc.d/tor" "$STATE/rcctl-mark"
@@ -1000,10 +923,6 @@ EOF
 #!/bin/sh
 exit 0
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
 	mkdir -p "$TESTDIR/rc.d"
 	: >"$TESTDIR/rc.d/tor"
 	chmod +x "$TESTDIR/rc.d/tor"
@@ -1039,10 +958,6 @@ EOF
 exit 1
 EOF
 	mockcmd rcctl <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	mockcmd date <<'EOF'
 #!/bin/sh
 exit 1
 EOF
@@ -1096,11 +1011,7 @@ EOF
 #!/bin/sh
 exit 1
 EOF
-	mockcmd date <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-	run_bar
+	run_bar 0.1
 	expect_line_contains 1 "Evil +@fg=1; Net" "SSID is passed through verbatim (spectrwm does not expand markup)"
 	expect_stderr_empty
 }

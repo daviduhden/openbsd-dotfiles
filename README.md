@@ -52,7 +52,7 @@ lock is configured.
 The status bar is spectrwm's native bar. Workspaces and the focused window
 title are rendered by spectrwm itself, and the date and time come from the
 `bar_format` string; the `bar_action` script
-[`.config/spectrwm/statusbar.ksh`](.config/spectrwm/statusbar.ksh) adds
+[`.config/spectrwm/statusbar.pl`](.config/spectrwm/statusbar.pl) adds
 CPU, memory, battery/AC, network, throughput and Tor status on staggered
 refresh tiers (CPU and throughput every 2 seconds, the rest every 10 to 30
 seconds), using only OpenBSD base utilities. There is no external bar:
@@ -67,9 +67,9 @@ The configuration assumes the package prefix `/usr/local`. Dunst uses its recurs
 On OpenBSD, useful non-executing checks are:
 
 ```sh
-$ ksh -n install.ksh .profile.ksh .xsession.ksh \
-    .config/spectrwm/initscreen.ksh .config/spectrwm/screenshot.ksh \
-    .config/spectrwm/statusbar.ksh
+$ ksh -n install.ksh .profile.ksh .xsession.ksh
+$ perl -c .config/spectrwm/initscreen.pl \
+    .config/spectrwm/screenshot.pl .config/spectrwm/statusbar.pl
 $ sh -n xenodm/Xsetup_0.sh
 $ doas -C /etc/doas.conf
 ```
