@@ -54,18 +54,19 @@ $| = 1;                    # flush every line immediately
 $ENV{PATH} = '/bin:/sbin:/usr/bin:/usr/sbin';
 
 my $interval = 2;
-if (defined $ENV{STATUSBAR_INTERVAL}
-    && $ENV{STATUSBAR_INTERVAL} =~ /^(\d+(?:\.\d+)?)$/) {
+if ( defined $ENV{STATUSBAR_INTERVAL}
+    && $ENV{STATUSBAR_INTERVAL} =~ /^(\d+(?:\.\d+)?)$/ )
+{
     $interval = $1;
     $interval = 2 if $interval <= 0;
 }
 
 my $max_iterations = 0;
-if (@ARGV && $ARGV[0] =~ /^\d+$/) {
+if ( @ARGV && $ARGV[0] =~ /^\d+$/ ) {
     $max_iterations = $ARGV[0];
 }
 
-my $is_openbsd = ((POSIX::uname())[0] // '') eq 'OpenBSD';
+my $is_openbsd = ( ( POSIX::uname() )[0] // '' ) eq 'OpenBSD';
 
 # Absolute paths to the data-gathering tools.
 my %CMD = (
@@ -81,34 +82,38 @@ my %CMD = (
 # descriptor to discard stdout/stderr without opening files.
 open my $null_fh, '<', '/dev/null' or die "cannot open /dev/null: $!";
 
-if ($^O eq 'openbsd') {
+if ( $^O eq 'openbsd' ) {
+
     # data-gathering tools (executed every cycle)
-    unveil($CMD{sysctl},   'x')  or die "unveil sysctl: $!";
-    unveil($CMD{vmstat},   'x')  or die "unveil vmstat: $!";
-    unveil($CMD{apm},      'x')  or die "unveil apm: $!";
-    unveil($CMD{netstat},  'x')  or die "unveil netstat: $!";
-    unveil($CMD{ifconfig}, 'x')  or die "unveil ifconfig: $!";
+    unveil( $CMD{sysctl},   'x' ) or die "unveil sysctl: $!";
+    unveil( $CMD{vmstat},   'x' ) or die "unveil vmstat: $!";
+    unveil( $CMD{apm},      'x' ) or die "unveil apm: $!";
+    unveil( $CMD{netstat},  'x' ) or die "unveil netstat: $!";
+    unveil( $CMD{ifconfig}, 'x' ) or die "unveil ifconfig: $!";
+
     # apm(8) talks to apmd(8) and falls back to /dev/apm
-    unveil('/var/run/apmdev', 'w') or die "unveil apmdev: $!";
-    unveil('/dev/apm', 'r')        or die "unveil /dev/apm: $!";
+    unveil( '/var/run/apmdev', 'w' ) or die "unveil apmdev: $!";
+    unveil( '/dev/apm',        'r' ) or die "unveil /dev/apm: $!";
+
     # Tor check chain: rcctl(8) is a ksh script that sources
     # rc.subr, parses rc.conf, validates the action with grep(1)
     # and id(1), and runs /etc/rc.d/tor which execs pgrep(1)
-    unveil($CMD{rcctl},     'rx') or die "unveil rcctl: $!";
-    unveil('/bin/ksh',      'x')  or die "unveil ksh: $!";
-    unveil('/etc/rc.d/tor', 'rx') or die "unveil rc.d/tor: $!";
-    unveil('/etc/rc.d/rc.subr', 'r') or die "unveil rc.subr: $!";
-    unveil('/etc/rc.conf',  'r')  or die "unveil rc.conf: $!";
-    unveil('/etc/rc.conf.local', 'r') or die "unveil rc.conf.local: $!";
-    unveil('/usr/bin/grep', 'x')  or die "unveil grep: $!";
-    unveil('/usr/bin/id',   'x')  or die "unveil id: $!";
-    unveil('/usr/bin/pgrep', 'x') or die "unveil pgrep: $!";
+    unveil( $CMD{rcctl},          'rx' ) or die "unveil rcctl: $!";
+    unveil( '/bin/ksh',           'x' )  or die "unveil ksh: $!";
+    unveil( '/etc/rc.d/tor',      'rx' ) or die "unveil rc.d/tor: $!";
+    unveil( '/etc/rc.d/rc.subr',  'r' )  or die "unveil rc.subr: $!";
+    unveil( '/etc/rc.conf',       'r' )  or die "unveil rc.conf: $!";
+    unveil( '/etc/rc.conf.local', 'r' )  or die "unveil rc.conf.local: $!";
+    unveil( '/usr/bin/grep',      'x' )  or die "unveil grep: $!";
+    unveil( '/usr/bin/id',        'x' )  or die "unveil id: $!";
+    unveil( '/usr/bin/pgrep',     'x' )  or die "unveil pgrep: $!";
+
     # dynamically linked children need the linker and the
     # shared libraries (versioned names, so the directory)
-    unveil('/usr/libexec/ld.so', 'rx') or die "unveil ld.so: $!";
-    unveil('/usr/lib', 'r') or die "unveil /usr/lib: $!";
-    unveil() or die "unable to lock unveil: $!";
-    pledge('proc', 'exec') or die "unable to pledge: $!";
+    unveil( '/usr/libexec/ld.so', 'rx' ) or die "unveil ld.so: $!";
+    unveil( '/usr/lib', 'r' )            or die "unveil /usr/lib: $!";
+    unveil()                             or die "unable to lock unveil: $!";
+    pledge( 'proc', 'exec' )             or die "unable to pledge: $!";
 }
 
 # This script runs no X11 clients; keep the children away from
@@ -118,10 +123,10 @@ delete $ENV{XAUTHORITY};
 
 # State held across iterations (CPU baseline and throughput
 # counters stay in this process; no temporary files).
-my ($cpu_total, $cpu_idle, $cpu_have_prev) = (0, 0, 0);
+my ( $cpu_total, $cpu_idle, $cpu_have_prev ) = ( 0, 0, 0 );
 my $traffic_iface;
 my $traffic_prev_iface;
-my ($traffic_rx, $traffic_tx, $traffic_time);
+my ( $traffic_rx, $traffic_tx, $traffic_time );
 
 # Run a command without a shell, capturing its standard output.
 # The command's stderr is discarded: the failures are expected
@@ -130,9 +135,9 @@ my ($traffic_rx, $traffic_tx, $traffic_time);
 # cannot be executed.
 sub run_capture {
     my ($cmd) = @_;
-    my $pid = open(my $fh, '-|');
+    my $pid = open( my $fh, '-|' );
     return unless defined $pid;
-    if ($pid == 0) {
+    if ( $pid == 0 ) {
         open STDERR, '>&', $null_fh or exit 1;
         exec @$cmd;
         exit 1;
@@ -151,9 +156,9 @@ sub run_capture {
 # displayed instead of showing a bogus percentage.
 sub get_cpu {
     return unless $is_openbsd;
-    my $out = run_capture([ $CMD{sysctl}, '-n', 'kern.cp_time' ]);
+    my $out = run_capture( [ $CMD{sysctl}, '-n', 'kern.cp_time' ] );
     return unless defined $out;
-    my @v = split(' ', $out);
+    my @v = split( ' ', $out );
     return unless @v >= 5;
     for (@v) {
         return unless /^\d+$/;
@@ -162,15 +167,18 @@ sub get_cpu {
     $total += $_ for @v;
     my $idle = $v[-1];
     my $field;
-    if ($cpu_have_prev && $total >= $cpu_total
-        && $idle >= $cpu_idle && $total > $cpu_total) {
-        my $pct = sprintf('%.0f', 100 *
-            ($total - $cpu_total - ($idle - $cpu_idle)) /
-            ($total - $cpu_total));
+    if (   $cpu_have_prev
+        && $total >= $cpu_total
+        && $idle >= $cpu_idle
+        && $total > $cpu_total )
+    {
+        my $pct = sprintf( '%.0f',
+            100 * ( $total - $cpu_total - ( $idle - $cpu_idle ) ) /
+              ( $total - $cpu_total ) );
         $field = "CPU ${pct}%";
     }
-    $cpu_total = $total;
-    $cpu_idle = $idle;
+    $cpu_total     = $total;
+    $cpu_idle      = $idle;
     $cpu_have_prev = 1;
     return $field;
 }
@@ -183,45 +191,47 @@ sub get_cpu {
 # misread. used = total - free, which includes the file cache.
 sub get_mem {
     return unless $is_openbsd;
-    my $total = run_capture([ $CMD{sysctl}, '-n', 'hw.physmem' ]);
+    my $total = run_capture( [ $CMD{sysctl}, '-n', 'hw.physmem' ] );
     return unless defined $total && $total =~ /^(\d+)$/;
     $total = $1;
-    my $vm = run_capture([ $CMD{vmstat} ]);
+    my $vm = run_capture( [ $CMD{vmstat} ] );
     return unless defined $vm;
-    my @lines = split("\n", $vm);
+    my @lines = split( "\n", $vm );
     return unless @lines >= 3;
-    my @hdr = split(' ', $lines[1]);
-    my ($col, $i) = (undef, 0);
+    my @hdr = split( ' ', $lines[1] );
+    my ( $col, $i ) = ( undef, 0 );
+
     for my $name (@hdr) {
-        if ($name eq 'fre') {
+        if ( $name eq 'fre' ) {
             $col = $i;
             last;
         }
         $i++;
     }
     return unless defined $col;
-    my @data = split(' ', $lines[2]);
-    my $fre = $data[$col];
+    my @data = split( ' ', $lines[2] );
+    my $fre  = $data[$col];
     return unless defined $fre && $fre =~ /^(\d+)M$/;
     $fre = $1;
     my $tmb = $total / 1048576;
     return if $fre >= $tmb;
     my $umb = $tmb - $fre;
-    if ($tmb >= 1024) {
-        return sprintf('MEM %.1fG/%.0fG', $umb / 1024, $tmb / 1024);
+
+    if ( $tmb >= 1024 ) {
+        return sprintf( 'MEM %.1fG/%.0fG', $umb / 1024, $tmb / 1024 );
     }
-    return sprintf('MEM %.0fM/%.0fM', $umb, $tmb);
+    return sprintf( 'MEM %.0fM/%.0fM', $umb, $tmb );
 }
 
 # --- Battery / AC state (apm) ------------------------------
 # apm has no combined flag for level and AC state, so two calls
 # are used; both run only every fifth cycle.
 sub get_bat {
-    my $pct = run_capture([ $CMD{apm}, '-l' ]);
+    my $pct = run_capture( [ $CMD{apm}, '-l' ] );
     return unless defined $pct && $pct =~ /^(\d{1,3})$/;
     $pct = $1;
     return if $pct > 100;
-    my $ac = run_capture([ $CMD{apm}, '-a' ]);
+    my $ac = run_capture( [ $CMD{apm}, '-a' ] );
     return "AC ${pct}%" if defined $ac && $ac eq '1';
     return "BAT ${pct}%";
 }
@@ -233,62 +243,73 @@ sub get_bat {
 # default route at all, the first interface that reports
 # "status: active" is used.
 sub first_active_iface {
-    my $out = run_capture([ $CMD{ifconfig} ]);
+    my $out = run_capture( [ $CMD{ifconfig} ] );
     return unless defined $out;
-    my ($name, $active) = (undef, 0);
-    for my $line (split("\n", $out)) {
-        if ($line =~ /^([a-zA-Z][a-zA-Z0-9]*):/) {
+    my ( $name, $active ) = ( undef, 0 );
+    for my $line ( split( "\n", $out ) ) {
+        if ( $line =~ /^([a-zA-Z][a-zA-Z0-9]*):/ ) {
             return $name if $active && $name ne 'lo0';
-            ($name, $active) = ($1, 0);
-        } elsif ($line =~ /status: active/) {
+            ( $name, $active ) = ( $1, 0 );
+        }
+        elsif ( $line =~ /status: active/ ) {
             $active = 1;
         }
     }
-    return ($active && $name ne 'lo0') ? $name : undef;
+    return ( $active && $name ne 'lo0' ) ? $name : undef;
 }
 
 sub get_net {
     my $iface;
-    my $routes = run_capture([ $CMD{netstat}, '-rn' ]);
-    if (defined $routes) {
-        for my $line (split("\n", $routes)) {
-            if ($line =~ /^default\s/) {
-                my @f = split(' ', $line);
+    my $routes = run_capture( [ $CMD{netstat}, '-rn' ] );
+    if ( defined $routes ) {
+        for my $line ( split( "\n", $routes ) ) {
+            if ( $line =~ /^default\s/ ) {
+                my @f = split( ' ', $line );
                 $iface = $f[-1];
                 last;
             }
         }
     }
-    if (!defined $iface
-        || $iface =~ /^(?:lo|enc|pflog|tun|tap|wg|ppp|gif|gre|pair)/) {
+    if ( !defined $iface
+        || $iface =~ /^(?:lo|enc|pflog|tun|tap|wg|ppp|gif|gre|pair)/ )
+    {
         $iface = undef;
     }
     $iface = first_active_iface() unless defined $iface;
-    return unless defined $iface;
+    return                        unless defined $iface;
 
-    my $info = run_capture([ $CMD{ifconfig}, $iface ]);
+    my $info = run_capture( [ $CMD{ifconfig}, $iface ] );
     return unless defined $info;
 
-    my ($ip, $ssid);
-    for my $line (split("\n", $info)) {
-        if (!defined $ip && $line =~ /^\s*inet (\S+)/) {
+    my ( $ip, $ssid );
+    for my $line ( split( "\n", $info ) ) {
+        if ( !defined $ip && $line =~ /^\s*inet (\S+)/ ) {
+
             # primary IPv4 address
             $ip = $1;
-        } elsif (!defined $ip && $line =~ /^\s*inet6 (\S+)/
-            && $1 !~ /^fe80:/ && $1 ne '::1') {
+        }
+        elsif ( !defined $ip
+            && $line =~ /^\s*inet6 (\S+)/
+            && $1    !~ /^fe80:/
+            && $1 ne '::1' )
+        {
             # on IPv6-only links, the first global IPv6 address
             $ip = $1;
-        } elsif (!defined $ssid && $line =~ /^\s*ieee80211:/
-            && $line =~ / (?:nwid|join) ("[^"]*"|\S+)/) {
+        }
+        elsif ( !defined $ssid
+            && $line =~ /^\s*ieee80211:/
+            && $line =~ / (?:nwid|join) ("[^"]*"|\S+)/ )
+        {
             # associated nwid; ifconfig quotes names with spaces
             $ssid = $1;
             $ssid =~ s/^"//;
             $ssid =~ s/"$//;
         }
     }
-    my $field = "NET $iface "
-        . ($ssid ? "$ssid " : '')
-        . (defined $ip ? $ip : 'no ip');
+    my $field =
+        "NET $iface "
+      . ( $ssid       ? "$ssid " : '' )
+      . ( defined $ip ? $ip      : 'no ip' );
     return { field => $field, iface => $iface };
 }
 
@@ -299,45 +320,53 @@ sub get_net {
 # restart the baseline.
 sub rate {
     my ($n) = @_;
-    my ($d, $u);
-    if ($n >= 1073741824) {
-        ($d, $u) = (1073741824, 'G');
-    } elsif ($n >= 1048576) {
-        ($d, $u) = (1048576, 'M');
-    } elsif ($n >= 1024) {
-        ($d, $u) = (1024, 'K');
-    } else {
-        return sprintf('%dB', int($n));
+    my ( $d, $u );
+    if ( $n >= 1073741824 ) {
+        ( $d, $u ) = ( 1073741824, 'G' );
+    }
+    elsif ( $n >= 1048576 ) {
+        ( $d, $u ) = ( 1048576, 'M' );
+    }
+    elsif ( $n >= 1024 ) {
+        ( $d, $u ) = ( 1024, 'K' );
+    }
+    else {
+        return sprintf( '%dB', int($n) );
     }
     my $v = $n / $d;
-    return sprintf('%d%s', int($v + 0.5), $u) if $v >= 10;
-    return sprintf('%d%s', int($v), $u) if $v == int($v);
-    return sprintf('%.1f%s', $v, $u);
+    return sprintf( '%d%s',   int( $v + 0.5 ), $u ) if $v >= 10;
+    return sprintf( '%d%s',   int($v),         $u ) if $v == int($v);
+    return sprintf( '%.1f%s', $v,              $u );
 }
 
 sub get_traffic {
     return unless defined $traffic_iface;
-    if (defined $traffic_rx && $traffic_prev_iface ne $traffic_iface) {
+    if ( defined $traffic_rx && $traffic_prev_iface ne $traffic_iface ) {
         $traffic_rx = $traffic_tx = $traffic_time = undef;
     }
     my $now = time();
-    my $out = run_capture([ $CMD{netstat}, '-nib', '-I', $traffic_iface ]);
+    my $out = run_capture( [ $CMD{netstat}, '-nib', '-I', $traffic_iface ] );
     return unless defined $out;
-    my @lines = split("\n", $out);
+    my @lines = split( "\n", $out );
     return unless @lines >= 2;
-    my @f = split(' ', $lines[1]);
+    my @f = split( ' ', $lines[1] );
     return unless @f == 6 && $f[4] =~ /^\d+$/ && $f[5] =~ /^\d+$/;
-    my ($rx, $tx) = ($f[4], $f[5]);
+    my ( $rx, $tx ) = ( $f[4], $f[5] );
     my $field;
-    if (defined $traffic_rx && $now > $traffic_time
-        && $rx >= $traffic_rx && $tx >= $traffic_tx) {
+
+    if (   defined $traffic_rx
+        && $now > $traffic_time
+        && $rx >= $traffic_rx
+        && $tx >= $traffic_tx )
+    {
         my $elapsed = $now - $traffic_time;
-        $field = 'dn ' . rate(($rx - $traffic_rx) / $elapsed)
-            . ' up ' . rate(($tx - $traffic_tx) / $elapsed);
+        $field = 'dn '
+          . rate( ( $rx - $traffic_rx ) / $elapsed ) . ' up '
+          . rate( ( $tx - $traffic_tx ) / $elapsed );
     }
-    $traffic_rx = $rx;
-    $traffic_tx = $tx;
-    $traffic_time = $now;
+    $traffic_rx         = $rx;
+    $traffic_tx         = $tx;
+    $traffic_time       = $now;
     $traffic_prev_iface = $traffic_iface;
     return $field;
 }
@@ -349,9 +378,9 @@ sub get_traffic {
 # stat(2) would additionally require the rpath promise).
 sub service_running {
     my ($svc) = @_;
-    my $pid = open(my $fh, '-|');
+    my $pid = open( my $fh, '-|' );
     return 0 unless defined $pid;
-    if ($pid == 0) {
+    if ( $pid == 0 ) {
         open STDOUT, '>&', $null_fh or exit 1;
         open STDERR, '>&', $null_fh or exit 1;
         exec $CMD{rcctl}, 'check', $svc;
@@ -370,7 +399,7 @@ while (1) {
     my $cpu = get_cpu();
     push @fields, $cpu if defined $cpu && $cpu ne '';
 
-    if ($cycle % 5 == 1) {
+    if ( $cycle % 5 == 1 ) {
         my $mem = get_mem();
         push @fields, $mem if defined $mem;
         my $bat = get_bat();
@@ -379,7 +408,8 @@ while (1) {
         if ($net) {
             push @fields, $net->{field};
             $traffic_iface = $net->{iface};
-        } else {
+        }
+        else {
             push @fields, 'NET offline';
             $traffic_iface = undef;
         }
@@ -390,7 +420,7 @@ while (1) {
 
     push @fields, 'TOR' if $cycle % 15 == 1 && service_running('tor');
 
-    print join('  ', @fields), "\n";
+    print join( '  ', @fields ), "\n";
 
     last if $max_iterations && $cycle >= $max_iterations;
     sleep $interval;
