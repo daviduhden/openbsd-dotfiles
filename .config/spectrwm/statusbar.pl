@@ -319,7 +319,8 @@ sub get_net {
         }
     }
     my $field =
-        ( $ssid ? '📶' : '🔗' ) . " $iface "
+        ( $ssid ? '📶' : '🔗' )
+      . " $iface "
       . ( $ssid       ? "$ssid " : '' )
       . ( defined $ip ? $ip      : 'no ip' );
     return { field => $field, iface => $iface };
