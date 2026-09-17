@@ -171,8 +171,8 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_lacks 1 "CPU" "first sample shows no CPU percentage"
-	expect_line_contains 2 "CPU 80%" "CPU delta is computed correctly"
+	expect_line_lacks 1 "🖥" "first sample shows no CPU percentage"
+	expect_line_contains 2 "🖥 80%" "CPU delta is computed correctly"
 	expect_stderr_empty
 	expect_no_markup
 }
@@ -204,7 +204,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_no_line_contains "CPU" "zero delta never shows a CPU percentage"
+	expect_no_line_contains "🖥" "zero delta never shows a CPU percentage"
 	expect_stderr_empty
 }
 
@@ -250,9 +250,9 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_lacks 1 "CPU" "reset: first line has no CPU"
-	expect_line_lacks 2 "CPU" "reset: decreased counters show no bogus CPU"
-	expect_line_contains 3 "CPU 80%" "reset: CPU recovers after the reset"
+	expect_line_lacks 1 "🖥" "reset: first line has no CPU"
+	expect_line_lacks 2 "🖥" "reset: decreased counters show no bogus CPU"
+	expect_line_contains 3 "🖥 80%" "reset: CPU recovers after the reset"
 	expect_stderr_empty
 }
 
@@ -284,7 +284,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_no_line_contains "CPU" "malformed cp_time shows no CPU"
+	expect_no_line_contains "🖥" "malformed cp_time shows no CPU"
 	expect_stderr_empty
 }
 
@@ -324,7 +324,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_contains 1 "MEM 7.2G/8G" "memory shows used/total in GiB"
+	expect_line_contains 1 "🧠 7.2G/8G" "memory shows used/total in GiB"
 	expect_stderr_empty
 }
 
@@ -361,7 +361,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_contains 1 "MEM 412M/512M" "memory shows MiB on small machines"
+	expect_line_contains 1 "🧠 412M/512M" "memory shows MiB on small machines"
 	expect_stderr_empty
 }
 
@@ -398,7 +398,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_no_line_contains "MEM" "unsuffixed fre values are rejected, not misread"
+	expect_no_line_contains "🧠" "unsuffixed fre values are rejected, not misread"
 	expect_stderr_empty
 }
 
@@ -439,8 +439,8 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_contains 1 "NET offline" "no interfaces shows NET offline"
-	expect_no_line_contains "dn " "offline: no throughput field"
+	expect_line_contains 1 "❌ offline" "no interfaces shows NET offline"
+	expect_no_line_contains "📥" "offline: no throughput field"
 	expect_stderr_empty
 }
 
@@ -485,7 +485,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_contains 1 "NET em0 192.0.2.10" "wired interface with IPv4 address"
+	expect_line_contains 1 "🔗 em0 192.0.2.10" "wired interface with IPv4 address"
 	expect_stderr_empty
 }
 
@@ -529,7 +529,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_contains 1 "NET em0 2001:db8::10" "IPv6-only interface shows global address"
+	expect_line_contains 1 "🔗 em0 2001:db8::10" "IPv6-only interface shows global address"
 	expect_line_lacks 1 "fe80" "link-local IPv6 is not displayed"
 	expect_stderr_empty
 }
@@ -574,7 +574,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_contains 1 "NET iwm0 My Home Net 10.0.0.2" "quoted SSID with spaces is kept whole"
+	expect_line_contains 1 "📶 iwm0 My Home Net 10.0.0.2" "quoted SSID with spaces is kept whole"
 	expect_stderr_empty
 }
 
@@ -626,7 +626,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_contains 1 "NET em0 192.0.2.10" "tunnel default route falls back to physical interface"
+	expect_line_contains 1 "🔗 em0 192.0.2.10" "tunnel default route falls back to physical interface"
 	expect_line_lacks 1 "tun0" "tunnel interface is not displayed"
 	expect_stderr_empty
 }
@@ -682,8 +682,8 @@ EOF
 	# real elapsed time is used for the rates (Perl's time()),
 	# so the cycle interval must exceed one second
 	run_bar 1.5
-	expect_line_lacks 1 "dn " "throughput: first sample is omitted"
-	expect_line_contains 2 "dn [0-9].*K up [0-9].*K" "throughput rates scale to K"
+	expect_line_lacks 1 "📥" "throughput: first sample is omitted"
+	expect_line_contains 2 "📥 [0-9].*K 📤 [0-9].*K" "throughput rates scale to K"
 	expect_stderr_empty
 }
 
@@ -739,8 +739,8 @@ EOF
 exit 1
 EOF
 	run_bar 1.5
-	expect_line_lacks 2 "dn " "throughput: decreased counters show no rate"
-	expect_line_contains 3 "dn " "throughput: rate recovers after the reset"
+	expect_line_lacks 2 "📥" "throughput: decreased counters show no rate"
+	expect_line_contains 3 "📥" "throughput: rate recovers after the reset"
 	expect_stderr_empty
 }
 
@@ -778,7 +778,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_no_line_contains "BAT\|AC " "no battery: no BAT/AC field"
+	expect_no_line_contains "🔋\|🪫\|🔌" "no battery: no battery/AC field"
 	expect_stderr_empty
 }
 
@@ -816,7 +816,45 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_contains 1 "BAT 72%" "battery on battery power"
+	expect_line_contains 1 "🔋 72%" "battery on battery power"
+	expect_stderr_empty
+}
+
+test_bat_low() {
+	reset_mocks
+	mockcmd sysctl <<'EOF'
+#!/bin/sh
+case "$*" in
+"-n hw.physmem") echo 8589934592 ;;
+"-n kern.cp_time") echo "2000 2400 2500 2600 3500" ;;
+*) exit 1 ;;
+esac
+EOF
+	mockcmd vmstat <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+	mockcmd apm <<'EOF'
+#!/bin/sh
+case "$1" in
+-l) echo 9 ;;
+-a) echo 0 ;;
+esac
+EOF
+	mockcmd netstat <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+	mockcmd ifconfig <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+	mockcmd rcctl <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+	run_bar 0.1
+	expect_line_contains 1 "🪫 9%" "low battery shows the drained icon"
 	expect_stderr_empty
 }
 
@@ -854,7 +892,7 @@ EOF
 exit 1
 EOF
 	run_bar 0.1
-	expect_line_contains 1 "AC 93%" "charging shows AC state"
+	expect_line_contains 1 "🔌 93%" "charging shows AC state"
 	expect_stderr_empty
 }
 
@@ -893,7 +931,7 @@ exit 1
 EOF
 	rm -f "$TESTDIR/rc.d/tor"
 	run_bar_tor
-	expect_no_line_contains "TOR" "tor absent: no TOR field"
+	expect_no_line_contains "🧅" "tor absent: no TOR field"
 	expect_stderr_empty
 }
 
@@ -931,7 +969,7 @@ EOF
 	: >"$TESTDIR/rc.d/tor"
 	chmod +x "$TESTDIR/rc.d/tor"
 	run_bar_tor
-	expect_line_contains 1 "TOR" "tor running shows TOR"
+	expect_line_contains 1 "🧅" "tor running shows TOR"
 	expect_stderr_empty
 }
 
@@ -969,7 +1007,7 @@ EOF
 	: >"$TESTDIR/rc.d/tor"
 	chmod +x "$TESTDIR/rc.d/tor"
 	run_bar_tor
-	expect_no_line_contains "TOR" "tor stopped shows no TOR"
+	expect_no_line_contains "🧅" "tor stopped shows no TOR"
 	expect_stderr_empty
 }
 
@@ -1164,6 +1202,7 @@ test_traffic_rates
 test_traffic_counter_reset
 test_bat_absent
 test_bat_on_battery_and_ac
+test_bat_low
 test_bat_on_ac
 test_tor_absent
 test_tor_running

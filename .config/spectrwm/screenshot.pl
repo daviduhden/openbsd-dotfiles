@@ -106,7 +106,7 @@ if ( $rc != 0 ) {
 }
 
 if ($have_notify) {
-    system( $notify, 'Screenshot saved', $outfile );
+    system( $notify, '📷 Screenshot saved', $outfile );
 }
 
-print "Saved: $outfile\n";
+print "📷 Saved: $outfile\n";

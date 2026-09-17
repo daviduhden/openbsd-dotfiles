@@ -38,7 +38,8 @@ The general design of this setup:
 * **Status bar:** the native spectrwm bar, enabled and placed at the bottom
   of every region, with the workspace indicator on the left, the focused
   window title centered, and system status (CPU, memory, battery/AC,
-  network, throughput, Tor) plus the date and time on the right (see
+  network, throughput, Tor) plus the date and time on the right; each
+  status field starts with a compact emoji (see
   [Status Bar](#status-bar)). There is no external bar such as Lemonbar.
 * **Startup:** spectrwm runs [`initscreen.pl`](.config/spectrwm/initscreen.pl)
   via `autorun` to configure displays with `xrandr`; the rest of the session
@@ -244,12 +245,14 @@ The bar is enabled (`bar_enabled = 1`) and placed at the bottom of every
 region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
 `.Xresources` and `dunstrc`.
 
-* **Font:** `bar_font = xft:Noto Sans Mono:style=Regular:size=10`
-  (the `noto-fonts` package).
+* **Font:** `bar_font = xft:Noto Sans Mono:style=Regular:size=10,xft:Noto Color Emoji:size=10`
+  (the `noto-fonts` and `noto-emoji` packages). The first entry is the
+  primary font; the second is a per-character fallback that provides the
+  emoji used by the status fields and the date/time markers.
 * **Format:** `bar_justify = center` with the three-section format
 
   ```
-  bar_format = +|2L +I:+D (+w) +|3C +W +|4R +A  %Y-%m-%d %H:%M
+  bar_format = +|2L +I:+D (+w) +|3C +W +|4R +A  📅 %Y-%m-%d 🕒 %H:%M
   ```
 
   * `+|2L` - left-justified section (weight 2): `+I` renders the current
@@ -260,10 +263,11 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     title.
   * `+|4R` - right-justified section (weight 4): `+A` renders the output of
     the `bar_action` script (the system status fields listed below),
-    followed by the literal `%Y-%m-%d %H:%M`, which is expanded by
-    `strftime(3)` into the date and time. The format string is re-expanded
-    on every bar redraw, so the clock follows the refresh rate of the
-    status script.
+    followed by `📅 %Y-%m-%d 🕒 %H:%M`, which is expanded by
+    `strftime(3)` into the date and time (the calendar and clock emoji are
+    literal characters passed through unchanged). The format string is
+    re-expanded on every bar redraw, so the clock follows the refresh rate
+    of the status script.
 * **Status script:** `bar_action = ~/.config/spectrwm/statusbar.pl`.
   A single persistent Perl process (base `/usr/bin/perl`): spectrwm
   starts it once and reads one status line from its standard output per
@@ -272,29 +276,32 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
   external processes are the base commands that provide the data. The
   script prints, in order:
 
-  * `CPU nn%` - CPU usage averaged over the last interval, computed from
+  * `🖥 nn%` - CPU usage averaged over the last interval, computed from
     `kern.cp_time` deltas (all CPU states are summed and the last one,
     idle, is subtracted, which stays correct across OpenBSD versions that
     added CPU states). The first sample after startup and samples after
     counter resets are omitted rather than showing a bogus percentage.
-  * `MEM u/G` - used and total memory. "used" is `hw.physmem` minus the
+  * `🧠 u/G` - used and total memory. "used" is `hw.physmem` minus the
     free-list size from the `fre` column of `vmstat` (which is printed in
     MB with an `M` suffix; the column is located through the header).
     This is an approximation that includes the file cache and inactive
     pages. Machines with less than 1 GiB of RAM show MiB instead.
-  * `BAT nn%` - battery level from `apm -l`; shown as `AC nn%` while the
-    adapter is connected (`apm -a`). The field is omitted on machines
-    without APM support.
-  * `NET iface ssid ip` - the interface carrying the default route
-    (`netstat -rn`), its SSID for wireless interfaces, and its primary
-    IPv4 address. On IPv6-only links the first global IPv6 address is
-    shown (link-local `fe80::` and `::1` are skipped); `NET iface no ip`
-    when the interface has no address yet; `NET offline` when no
-    interface is up. Without a default route, the first interface that
-    reports `status: active` is used. If the default route points through
-    a tunnel-like interface (`tun`, `tap`, `wg`, `ppp`, `gif`, `gre`,
-    `pair` and friends), a physical interface is shown instead.
-  * `dn 2K up 1K` - throughput over the last interval, from the
+  * `🔋 nn%` - battery level from `apm -l`; shown as `🔌 nn%` while the
+    adapter is connected (`apm -a`) and as `🪫 nn%` at or below the
+    low-battery threshold (15% by default, set with
+    `STATUSBAR_BATTERY_LOW`). The field is omitted on machines without
+    APM support.
+  * `📶 iface ssid ip` (wireless) or `🔗 iface ip` (wired) - the interface
+    carrying the default route (`netstat -rn`), its SSID when one is
+    present, and its primary IPv4 address. On IPv6-only links the first
+    global IPv6 address is shown (link-local `fe80::` and `::1` are
+    skipped); `<icon> iface no ip` when the interface has no address yet;
+    `❌ offline` when no interface is up. Without a default route, the
+    first interface that reports `status: active` is used. If the default
+    route points through a tunnel-like interface (`tun`, `tap`, `wg`,
+    `ppp`, `gif`, `gre`, `pair` and friends), a physical interface is
+    shown instead.
+  * `📥 2K 📤 1K` - throughput over the last interval, from the
     `Ibytes`/`Obytes` columns of `netstat -nib -I` (with `-b`, those are
     the last two columns of the link row). Units scale automatically
     (`B`, `K`, `M`, `G`); one decimal is shown only for values below 10,
@@ -302,21 +309,35 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     interface changes restart the baseline instead of showing a bogus
     rate; the state lives in the script process itself, with no
     temporary files.
-  * `TOR` - present only while `rcctl check tor` succeeds.
+  * `🧅` - present only while `rcctl check tor` succeeds. A stopped Tor
+    and an uninstalled Tor are indistinguishable through this check, so
+    no separate inactive icon is drawn.
 
   Refresh tiers: CPU and throughput are sampled every 2-second cycle;
   memory, battery and network state every 5th cycle (10 s); Tor every
-  15th cycle (30 s). Every field comes from OpenBSD base utilities, is
-  plain ASCII, and is silently omitted when the underlying hardware,
-  interface or service is missing, so a desktop without a battery or
-  Wi-Fi produces no errors. Only the status line is written to stdout,
-  and because `bar_action_expand` is off, no character in the output
-  (such as an SSID containing `+@`) can be interpreted as bar markup.
+  15th cycle (30 s). Every field comes from OpenBSD base utilities and is
+  silently omitted when the underlying hardware, interface or service is
+  missing, so a desktop without a battery or Wi-Fi produces no errors.
+  Only the status line is written to stdout, and because
+  `bar_action_expand` is off, no character in the output (such as an SSID
+  containing `+@`) can be interpreted as bar markup.
+
+  The emoji are single code points without ZWJ joins or variation
+  selectors. spectrwm chooses the font for each character separately
+  through the `bar_font` fallback list, and `Noto Color Emoji` does not
+  map `U+FE0F`, so a variation-selector sequence would render as a
+  `.notdef` box. Noto Color Emoji is a fixed-size CBDT bitmap font
+  (`pixelsize=109`); OpenBSD's fontconfig configuration links
+  `10-scale-bitmap-fonts.conf` in `/etc/fonts/conf.d`, which provides
+  the scale matrix that lets Xft draw it at the 10-point bar size. If the
+  fallback cannot be loaded, spectrwm logs `unable to load font` to
+  `~/.xsession-errors` and the missing glyphs are drawn as `.notdef`.
 
   For debugging and testing, `statusbar.pl` accepts an optional
   iteration count (`statusbar.pl 5` runs five cycles and exits) and
   honors `STATUSBAR_INTERVAL` (seconds, fractional allowed) to override
-  the 2-second cycle.
+  the 2-second cycle and `STATUSBAR_BATTERY_LOW` (percent) to change the
+  low-battery threshold.
 
 * **Sandbox:** on OpenBSD the three helper scripts restrict themselves
   with base Perl's `OpenBSD::Pledge` and `OpenBSD::Unveil` modules (the
@@ -460,6 +481,8 @@ All of these appear in [`packages.txt`](packages.txt) unless noted:
 * `xclip` - clipboard helper used by `Mod+Shift+c`.
 * `scrot` - screenshot backend used by `screenshot.pl`.
 * `noto-fonts` - the `Noto Sans Mono` font used by the bar, dmenu and xterm.
+* `noto-emoji` - `Noto Color Emoji`, the per-character fallback that
+  draws the emoji in the bar and in notifications.
 * `dunst` - notification daemon (optional at runtime; started from
   `.xsession` only when installed).
 * `openbsd-backgrounds` - provides `openbsd-wallpaper` (optional at
@@ -501,9 +524,10 @@ noted:
 * **Screenshots:** `program[screenshot_all]` / `program[screenshot_wind]`
   and the script [`.config/spectrwm/screenshot.pl`](.config/spectrwm/screenshot.pl)
   (output directory is set in the script).
-* **Bar:** `bar_enabled`, `bar_at_bottom`, `bar_font`, `bar_format`,
-  `bar_justify`, `bar_border_width`, `bar_padding_*`. The system status
-  fields are produced by
+* **Bar:** `bar_enabled`, `bar_at_bottom`, `bar_font` (comma-separated
+  primary and fallback fonts, including the Noto Color Emoji fallback),
+  `bar_format`, `bar_justify`, `bar_border_width`, `bar_padding_*`. The
+  system status fields are produced by
   [`.config/spectrwm/statusbar.pl`](.config/spectrwm/statusbar.pl),
   referenced by the `bar_action` line; edit that script (for example, to
   change the refresh tiers or drop a field) and keep it executable.

@@ -16,9 +16,11 @@
 #
 # The line contains, in order: CPU usage, memory usage, battery
 # or AC state, network state, network throughput and Tor status.
-# All values come from OpenBSD base utilities; their output is
-# parsed here in Perl. Missing hardware or services are omitted
-# silently; the output is plain ASCII.
+# Each field starts with a single-codepoint emoji (no ZWJ, no
+# variation selectors) so spectrwm's per-character Xft fallback
+# can select Noto Color Emoji reliably. All values come from
+# OpenBSD base utilities; their output is parsed here in Perl.
+# Missing hardware or services are omitted silently.
 #
 # Only the status line is written to stdout; all expected
 # command failures are handled at their source so that
@@ -38,6 +40,7 @@
 # Optional arguments, useful for testing and manual runs:
 #   statusbar.pl [iterations]      limit the number of cycles
 #   STATUSBAR_INTERVAL=seconds     override the 2-second cycle
+#   STATUSBAR_BATTERY_LOW=percent  low-battery threshold (default 15)
 #
 # See the LICENSE file at the top of the project tree for
 # copyright and license details.
@@ -59,6 +62,14 @@ if ( defined $ENV{STATUSBAR_INTERVAL}
 {
     $interval = $1;
     $interval = 2 if $interval <= 0;
+}
+
+my $low_battery = 15;
+if ( defined $ENV{STATUSBAR_BATTERY_LOW}
+    && $ENV{STATUSBAR_BATTERY_LOW} =~ /^(\d{1,3})$/ )
+{
+    $low_battery = $1;
+    $low_battery = 100 if $low_battery > 100;
 }
 
 my $max_iterations = 0;
@@ -175,7 +186,7 @@ sub get_cpu {
         my $pct = sprintf( '%.0f',
             100 * ( $total - $cpu_total - ( $idle - $cpu_idle ) ) /
               ( $total - $cpu_total ) );
-        $field = "CPU ${pct}%";
+        $field = "🖥 ${pct}%";
     }
     $cpu_total     = $total;
     $cpu_idle      = $idle;
@@ -218,9 +229,9 @@ sub get_mem {
     my $umb = $tmb - $fre;
 
     if ( $tmb >= 1024 ) {
-        return sprintf( 'MEM %.1fG/%.0fG', $umb / 1024, $tmb / 1024 );
+        return sprintf( '🧠 %.1fG/%.0fG', $umb / 1024, $tmb / 1024 );
     }
-    return sprintf( 'MEM %.0fM/%.0fM', $umb, $tmb );
+    return sprintf( '🧠 %.0fM/%.0fM', $umb, $tmb );
 }
 
 # --- Battery / AC state (apm) ------------------------------
@@ -232,8 +243,9 @@ sub get_bat {
     $pct = $1;
     return if $pct > 100;
     my $ac = run_capture( [ $CMD{apm}, '-a' ] );
-    return "AC ${pct}%" if defined $ac && $ac eq '1';
-    return "BAT ${pct}%";
+    return "🔌 ${pct}%" if defined $ac && $ac eq '1';
+    return "🪫 ${pct}%" if $pct <= $low_battery;
+    return "🔋 ${pct}%";
 }
 
 # --- Network: active interface, SSID and address -----------
@@ -307,7 +319,7 @@ sub get_net {
         }
     }
     my $field =
-        "NET $iface "
+        ( $ssid ? '📶' : '🔗' ) . " $iface "
       . ( $ssid       ? "$ssid " : '' )
       . ( defined $ip ? $ip      : 'no ip' );
     return { field => $field, iface => $iface };
@@ -360,8 +372,8 @@ sub get_traffic {
         && $tx >= $traffic_tx )
     {
         my $elapsed = $now - $traffic_time;
-        $field = 'dn '
-          . rate( ( $rx - $traffic_rx ) / $elapsed ) . ' up '
+        $field = '📥 '
+          . rate( ( $rx - $traffic_rx ) / $elapsed ) . ' 📤 '
           . rate( ( $tx - $traffic_tx ) / $elapsed );
     }
     $traffic_rx         = $rx;
@@ -410,7 +422,7 @@ while (1) {
             $traffic_iface = $net->{iface};
         }
         else {
-            push @fields, 'NET offline';
+            push @fields, '❌ offline';
             $traffic_iface = undef;
         }
     }
@@ -418,7 +430,7 @@ while (1) {
     my $traffic = get_traffic();
     push @fields, $traffic if defined $traffic && $traffic ne '';
 
-    push @fields, 'TOR' if $cycle % 15 == 1 && service_running('tor');
+    push @fields, '🧅' if $cycle % 15 == 1 && service_running('tor');
 
     print join( '  ', @fields ), "\n";
 

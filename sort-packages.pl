@@ -58,4 +58,4 @@ close $out or die "Cannot close $temporary: $!\n";
 rename $temporary, $pkg_file
   or die "Cannot replace $pkg_file: $!\n";
 
-print "Sorted: $pkg_file\n";
+print "📦 Sorted: $pkg_file\n";
