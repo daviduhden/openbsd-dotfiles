@@ -5,8 +5,8 @@
 #
 # The status bar script is executed against a directory of mock
 # OpenBSD commands that emulate the verified output formats of
-# sysctl, vmstat, apm, netstat, ifconfig, rcctl and date. The
-# installer tests extract ask_keyboard_layout and
+# sysctl, vmstat, apm, netstat, ifconfig, rcctl, sndioctl and
+# date. The installer tests extract ask_keyboard_layout and
 # apply_keyboard_layout from install.ksh and run them against
 # canned input.
 #
@@ -61,6 +61,7 @@ prepare_bar() {
 		-e "s#/usr/bin/netstat#$MOCK/netstat#g" \
 		-e "s#/sbin/ifconfig#$MOCK/ifconfig#g" \
 		-e "s#/usr/sbin/rcctl#$MOCK/rcctl#g" \
+		-e "s#/usr/bin/sndioctl#$MOCK/sndioctl#g" \
 		-e "s/^my \\\$is_openbsd = .*/my \\\$is_openbsd = 1;/" \
 		-e "s/\\\$^O eq 'openbsd'/0/g" \
 		"$TESTDIR/bar.pl"
@@ -285,6 +286,98 @@ exit 1
 EOF
 	run_bar 0.1
 	expect_no_line_contains "🖥" "malformed cp_time shows no CPU"
+	expect_stderr_empty
+}
+
+# ------------------------------------------------------------
+# Volume tests
+# ------------------------------------------------------------
+# The volume field comes from sndioctl alone; these mocks make
+# the other data sources absent so the assertion is unambiguous.
+mock_other_sources_absent() {
+	mockcmd sysctl <<'EOF'
+#!/bin/sh
+case "$*" in
+"-n hw.physmem") echo 8589934592 ;;
+"-n kern.cp_time") echo "2000 2400 2500 2600 3500" ;;
+*) exit 1 ;;
+esac
+EOF
+	mockcmd vmstat <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+	mockcmd apm <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+	mockcmd netstat <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+	mockcmd ifconfig <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+	mockcmd rcctl <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+}
+
+mock_volume() { # level mute
+	mockcmd sndioctl <<EOF
+#!/bin/sh
+printf 'output.level=$1\n'
+printf 'output.mute=$2\n'
+EOF
+}
+
+test_vol_high() {
+	reset_mocks
+	mock_other_sources_absent
+	mock_volume 0.750 0
+	run_bar 0.1
+	expect_line_contains 1 "🔊 75%" "high volume shows the loud icon and percentage"
+	expect_stderr_empty
+}
+
+test_vol_medium() {
+	reset_mocks
+	mock_other_sources_absent
+	mock_volume 0.500 0
+	run_bar 0.1
+	expect_line_contains 1 "🔉 50%" "mid volume shows the medium icon"
+	expect_stderr_empty
+}
+
+test_vol_low() {
+	reset_mocks
+	mock_other_sources_absent
+	mock_volume 0.100 0
+	run_bar 0.1
+	expect_line_contains 1 "🔈 10%" "low volume shows the quiet icon"
+	expect_stderr_empty
+}
+
+test_vol_muted() {
+	reset_mocks
+	mock_other_sources_absent
+	mock_volume 0.500 1
+	run_bar 0.1
+	expect_line_contains 1 "🔇 50%" "muted volume keeps the level but shows the muted icon"
+	expect_stderr_empty
+}
+
+test_vol_absent() {
+	reset_mocks
+	mock_other_sources_absent
+	mockcmd sndioctl <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+	run_bar 0.1
+	expect_no_line_contains "🔈\|🔉\|🔊\|🔇" "no audio hardware shows no volume field"
 	expect_stderr_empty
 }
 
@@ -1190,6 +1283,11 @@ test_cpu_first_sample_and_delta
 test_cpu_zero_delta
 test_cpu_counter_reset
 test_cpu_malformed_output
+test_vol_high
+test_vol_medium
+test_vol_low
+test_vol_muted
+test_vol_absent
 test_mem_modern_format
 test_mem_small_machine
 test_mem_rejects_old_format

@@ -37,9 +37,9 @@ The general design of this setup:
   rest of the desktop.
 * **Status bar:** the native spectrwm bar, enabled and placed at the bottom
   of every region, with the workspace indicator on the left, the focused
-  window title centered, and system status (CPU, memory, battery/AC,
-  network, throughput, Tor) plus the date and time on the right; each
-  status field starts with a compact emoji (see
+  window title centered, and system status (CPU, audio volume, memory,
+  battery/AC, network, throughput, Tor) plus the date and time on the
+  right; each status field starts with a compact emoji (see
   [Status Bar](#status-bar)). There is no external bar such as Lemonbar.
 * **Startup:** spectrwm runs [`initscreen.pl`](.config/spectrwm/initscreen.pl)
   via `autorun` to configure displays with `xrandr`; the rest of the session
@@ -281,6 +281,14 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     idle, is subtracted, which stays correct across OpenBSD versions that
     added CPU states). The first sample after startup and samples after
     counter resets are omitted rather than showing a bogus percentage.
+  * `🔊 nn%` - master output volume from `sndioctl` (the unprivileged
+    `sndio(7)` control client; `mixerctl` is root-only for the common
+    controls since OpenBSD 6.7). `output.level` is a 0..1 fraction shown
+    as a rounded percentage; the icon is `🔈` below roughly a third,
+    `🔉` below two thirds, `🔊` above that, and `🔇` while the separate
+    `output.mute` switch is on (the percentage is still shown). The
+    field is omitted when no `sndiod(8)` server or audio hardware is
+    available.
   * `🧠 u/G` - used and total memory. "used" is `hw.physmem` minus the
     free-list size from the `fre` column of `vmstat` (which is printed in
     MB with an `M` suffix; the column is located through the header).
@@ -313,11 +321,12 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     and an uninstalled Tor are indistinguishable through this check, so
     no separate inactive icon is drawn.
 
-  Refresh tiers: CPU and throughput are sampled every 2-second cycle;
-  memory, battery and network state every 5th cycle (10 s); Tor every
-  15th cycle (30 s). Every field comes from OpenBSD base utilities and is
-  silently omitted when the underlying hardware, interface or service is
-  missing, so a desktop without a battery or Wi-Fi produces no errors.
+  Refresh tiers: CPU, audio volume and throughput are sampled every
+  2-second cycle; memory, battery and network state every 5th cycle (10 s);
+  Tor every 15th cycle (30 s). Every field comes from OpenBSD base
+  utilities and is silently omitted when the underlying hardware,
+  interface or service is missing, so a desktop without a battery, a
+  sound card or Wi-Fi produces no errors.
   Only the status line is written to stdout, and because
   `bar_action_expand` is off, no character in the output (such as an SSID
   containing `+@`) can be interpreted as bar markup.
@@ -345,8 +354,12 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
 
   * `statusbar.pl` - `unveil`: the data-gathering executables (`x`), the
     apm socket `/var/run/apmdev` (`w`) and device `/dev/apm` (`r`), the
-    rcctl(8) Tor-check chain (`/usr/sbin/rcctl` `rx`, `/bin/ksh` `x`,
-    `/etc/rc.d/tor` `rx`, `/etc/rc.d/rc.subr`/`/etc/rc.conf`/`local` `r`,
+    sndiod(8) control sockets `/tmp/sndio` and `/tmp/sndio-<euid>` (`w`;
+    required by `connect(2)`) and the session-cookie directory `~/.sndio`
+    (`rwc`; created like libsndio would if missing, so that the rule
+    covers the cookie inside it), the rcctl(8) Tor-check chain
+    (`/usr/sbin/rcctl` `rx`, `/bin/ksh` `x`, `/etc/rc.d/tor` `rx`,
+    `/etc/rc.d/rc.subr`/`/etc/rc.conf`/`local` `r`,
     `grep`/`id`/`pgrep` `x`), the dynamic linker `rx` and `/usr/lib` `r`.
     `pledge`: `proc exec` (plus implied `stdio`).
   * `initscreen.pl` - `unveil`: `xrandr` (`x`), the Xauthority file
@@ -497,7 +510,7 @@ notifications when present and silently skips the notification otherwise.
 | File                                        | Purpose                                            |
 | ------------------------------------------- | -------------------------------------------------- |
 | [`.config/spectrwm/spectrwm.conf`](.config/spectrwm/spectrwm.conf) | Main spectrwm configuration: programs, bar, colors, `autorun`, `modkey` and all key bindings |
-| [`.config/spectrwm/statusbar.pl`](.config/spectrwm/statusbar.pl) | Status script run as `bar_action`; prints CPU, memory, battery, network, throughput and Tor status on staggered refresh tiers |
+| [`.config/spectrwm/statusbar.pl`](.config/spectrwm/statusbar.pl) | Status script run as `bar_action`; prints CPU, audio volume, memory, battery, network, throughput and Tor status on staggered refresh tiers |
 | [`.config/spectrwm/screenshot.pl`](.config/spectrwm/screenshot.pl) | Screenshot helper called by the two screenshot bindings |
 | [`.config/spectrwm/initscreen.pl`](.config/spectrwm/initscreen.pl) | Display setup script run by spectrwm's `autorun` at start-of-day |
 | [`.xsession.ksh`](.xsession.ksh)            | X session script (installed as `~/.xsession`); starts the session and execs spectrwm |

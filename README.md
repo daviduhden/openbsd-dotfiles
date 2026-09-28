@@ -53,10 +53,10 @@ The status bar is spectrwm's native bar. Workspaces and the focused window
 title are rendered by spectrwm itself, and the date and time come from the
 `bar_format` string; the `bar_action` script
 [`.config/spectrwm/statusbar.pl`](.config/spectrwm/statusbar.pl) adds
-CPU, memory, battery/AC, network, throughput and Tor status on staggered
-refresh tiers (CPU and throughput every 2 seconds, the rest every 10 to 30
-seconds), using only OpenBSD base utilities. Each field is tagged with a
-single-codepoint emoji, rendered through the `Noto Color Emoji`
+CPU, audio volume, memory, battery/AC, network, throughput and Tor status on
+staggered refresh tiers (CPU, volume and throughput every 2 seconds, the rest
+every 10 to 30 seconds), using only OpenBSD base utilities. Each field is
+tagged with a single-codepoint emoji, rendered through the `Noto Color Emoji`
 (`noto-emoji` package) fallback declared in `bar_font`; the calendar and
 clock markers in `bar_format` use the same fallback. There is no external
 bar: Lemonbar is neither installed nor started.

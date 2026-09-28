@@ -10,12 +10,13 @@
 # refresh rate.
 #
 # Refresh tiers (cycle = 2 seconds):
-#   every cycle    CPU usage, network throughput
+#   every cycle    CPU usage, audio volume, network throughput
 #   every 5th      memory, battery/AC state, network state
 #   every 15th     Tor state
 #
-# The line contains, in order: CPU usage, memory usage, battery
-# or AC state, network state, network throughput and Tor status.
+# The line contains, in order: CPU usage, audio volume, memory
+# usage, battery or AC state, network state, network throughput
+# and Tor status.
 # Each field starts with a single-codepoint emoji (no ZWJ, no
 # variation selectors) so spectrwm's per-character Xft fallback
 # can select Noto Color Emoji reliably. All values come from
@@ -28,8 +29,9 @@
 #
 # Sandbox (OpenBSD only, via base OpenBSD::Pledge/OpenBSD::Unveil):
 #   unveil    the data-gathering tools and the files needed by
-#             the rcctl(8) Tor check chain, the dynamic linker
-#             and the shared libraries; locked before the loop.
+#             the rcctl(8) Tor check chain, the sndiod(8) control
+#             sockets and session cookie, the dynamic linker and
+#             the shared libraries; locked before the loop.
 #   pledge    "proc exec" (plus implied stdio). Children run
 #             unpledged, so no network/route promises are needed
 #             in this process. A sandbox misconfiguration kills
@@ -87,11 +89,23 @@ my %CMD = (
     netstat  => '/usr/bin/netstat',
     ifconfig => '/sbin/ifconfig',
     rcctl    => '/usr/sbin/rcctl',
+    sndioctl => '/usr/bin/sndioctl',
 );
 
 # /dev/null is opened before the sandbox; children dup2() this
 # descriptor to discard stdout/stderr without opening files.
 open my $null_fh, '<', '/dev/null' or die "cannot open /dev/null: $!";
+
+# The sndio session cookie lives in ~/.sndio. The directory is
+# created here, before the first unveil(2) restricts the filesystem
+# view, exactly as libsndio(3) would on first use: unveiling it
+# afterwards as a directory makes the rule cover the cookie inside
+# it. Left undef when there is no HOME to build the path from.
+my $sndio_dir;
+if ( $^O eq 'openbsd' && defined $ENV{HOME} && length $ENV{HOME} ) {
+    $sndio_dir = "$ENV{HOME}/.sndio";
+    mkdir $sndio_dir, 0755 unless -d $sndio_dir;
+}
 
 if ( $^O eq 'openbsd' ) {
 
@@ -105,6 +119,20 @@ if ( $^O eq 'openbsd' ) {
     # apm(8) talks to apmd(8) and falls back to /dev/apm
     unveil( '/var/run/apmdev', 'w' ) or die "unveil apmdev: $!";
     unveil( '/dev/apm',        'r' ) or die "unveil /dev/apm: $!";
+
+    # sndioctl(1) controls the audio device through sndiod(8): the
+    # connection is a Unix socket in /tmp/sndio (system server) or
+    # /tmp/sndio-<euid> (per-user server), and the session cookie is
+    # read from, and created in, ~/.sndio. connect(2) to the sockets
+    # needs 'w' on their directory. $sndio_dir was created above,
+    # before the first unveil(2) restricted the filesystem view, so
+    # the rule covers the cookie inside it.
+    unveil( $CMD{sndioctl},  'x' ) or die "unveil sndioctl: $!";
+    unveil( '/tmp/sndio',    'w' ) or die "unveil /tmp/sndio: $!";
+    unveil( "/tmp/sndio-$>", 'w' ) or die "unveil per-user sndio socket: $!";
+    if ( defined $sndio_dir ) {
+        unveil( $sndio_dir, 'rwc' ) or die "unveil .sndio: $!";
+    }
 
     # Tor check chain: rcctl(8) is a ksh script that sources
     # rc.subr, parses rc.conf, validates the action with grep(1)
@@ -192,6 +220,44 @@ sub get_cpu {
     $cpu_idle      = $idle;
     $cpu_have_prev = 1;
     return $field;
+}
+
+# --- Audio volume, from sndioctl ---------------------------
+# sndioctl(1) is the unprivileged sndio(7) control utility
+# (mixerctl(8) is root-only for the common controls since
+# OpenBSD 6.7). The level is a 0..1 fraction printed with three
+# decimals; the mute switch is a separate 0/1 control, so the
+# whole control list is read in one call and both lines are
+# picked out by name. A missing sndiod(8) or audio hardware
+# makes the call fail and the field is omitted. The icon
+# reflects the mute state and, when unmuted, the level.
+sub get_volume {
+    my $out = run_capture( [ $CMD{sndioctl} ] );
+    return unless defined $out;
+    my ( $level, $mute );
+    for my $line ( split "\n", $out ) {
+        if ( $line =~ /^output\.level=(\d+(?:\.\d+)?)/ ) {
+            $level = $1;
+        }
+        elsif ( $line =~ /^output\.mute=(\d+)/ ) {
+            $mute = $1;
+        }
+    }
+    return unless defined $level && $level <= 1;
+    my $icon;
+    if ($mute) {
+        $icon = '🔇';
+    }
+    elsif ( $level < 0.34 ) {
+        $icon = '🔈';
+    }
+    elsif ( $level < 0.67 ) {
+        $icon = '🔉';
+    }
+    else {
+        $icon = '🔊';
+    }
+    return sprintf( '%s %.0f%%', $icon, $level * 100 );
 }
 
 # --- Memory usage, as used/total ---------------------------
@@ -411,6 +477,9 @@ while (1) {
 
     my $cpu = get_cpu();
     push @fields, $cpu if defined $cpu && $cpu ne '';
+
+    my $vol = get_volume();
+    push @fields, $vol if defined $vol && $vol ne '';
 
     if ( $cycle % 5 == 1 ) {
         my $mem = get_mem();
