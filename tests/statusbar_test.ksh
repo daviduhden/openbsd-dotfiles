@@ -62,7 +62,7 @@ prepare_bar() {
 		-e "s#/sbin/ifconfig#$MOCK/ifconfig#g" \
 		-e "s#/usr/sbin/rcctl#$MOCK/rcctl#g" \
 		-e "s#/usr/bin/sndioctl#$MOCK/sndioctl#g" \
-		-e "s/^my \\\$is_openbsd = .*/my \\\$is_openbsd = 1;/" \
+		-e 's/^my \$is_openbsd = .*/my \$is_openbsd = 1;/' \
 		-e "s/\\\$^O eq 'openbsd'/0/g" \
 		"$TESTDIR/bar.pl"
 }
