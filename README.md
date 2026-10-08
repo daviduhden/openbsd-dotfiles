@@ -117,6 +117,11 @@ load it once with `/theme dracula` and keep it with `/save`. htop needs
 no theme file: it uses the terminal's ANSI palette, which is already
 Dracula.
 
+Chromium is the one themed application the installer cannot configure:
+browser themes are installed from the Web Store. Add the
+[Dracula Chrome theme](https://chrome.google.com/webstore/detail/dracula-chrome-theme-dark/gfapcejdoghpoidkfodoiiffaaibpaem)
+manually; see [draculatheme.com/google-chrome](https://draculatheme.com/google-chrome).
+
 ## Static maintenance checks
 
 On OpenBSD, useful non-executing checks are:
