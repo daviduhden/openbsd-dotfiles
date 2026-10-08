@@ -72,7 +72,10 @@ Spanish (Spain) layout:
 
 The installer stores the selected XKB layout in `~/.xsession` as
 `KEYBOARD_LAYOUT` (`es` or `us`), and the session applies it with
-`setxkbmap es nodeadkeys` or `setxkbmap us`. Bindings that use the grave
+`setxkbmap es nodeadkeys` or `setxkbmap us`. The same selection sets the
+matching locale (`es_ES.UTF-8` for `es`, `en_US.UTF-8` for `us`) in
+`~/.xsession`, `~/.profile` and `/root/.profile`; `LC_COLLATE` stays `C`.
+Bindings that use the grave
 key are written with the `grave` keysym because under `es nodeadkeys`
 that key reports `grave`; with the plain `es` layout (dead keys enabled)
 it reports `dead_grave` instead, which is why the old `dead_grave`
@@ -436,7 +439,12 @@ What happens when the session starts, in order:
    paints the login screen's root window with the gray root-weave bitmap.
 2. After login, `xenodm` executes `~/.xsession` (installed from
    [`.xsession.ksh`](.xsession.ksh)):
-   * exports the locale `es_ES.UTF-8` and XDG base directories;
+   * sets a predictable `PATH` including the base system, Xenocara and
+     `/usr/local` directories (xenodm may hand the session a minimal
+     environment);
+   * exports the locale (`LANG`/`LC_CTYPE` set to `es_ES.UTF-8`,
+     `LC_COLLATE=C`; `LC_ALL` is left unset) and the XDG base
+     directories;
    * applies the keyboard layout stored in the `KEYBOARD_LAYOUT` line
      (`setxkbmap es nodeadkeys` or `setxkbmap us`); `install.ksh` writes
      that line (`es` or `us`, default `es`) when installing and rewrites
@@ -461,9 +469,10 @@ What happens when the session starts, in order:
    after `Mod+q` (restart), by design.
 
 The login shell profile (installed from [`.profile.ksh`](.profile.ksh)) is
-not part of the spectrwm startup chain; it sets `PATH`, the prompt,
-`LANG`/`LC_CTYPE`, and the `EDITOR`/`VISUAL`/`PAGER` environment for
-terminals opened inside the session.
+not part of the spectrwm startup chain; it sets `PATH`, the prompt, the
+`LANG`/`LC_CTYPE` locale selected by the installer, and the
+`EDITOR`/`VISUAL`/`PAGER` environment for terminals opened inside the
+session.
 
 ## Dependencies
 
@@ -500,6 +509,12 @@ All of these appear in [`packages.txt`](packages.txt) unless noted:
   `.xsession` only when installed).
 * `openbsd-backgrounds` - provides `openbsd-wallpaper` (optional at
   runtime; started from `.xsession` only when installed).
+* `kakoune`, `neomutt`, `tig`, `zathura` (`zathura-pdf-poppler`),
+  `cmus`, `mpv`, `irssi`, `profanity`, `fastfetch` and `telescope` -
+  TUI/CLI applications shipped with Dracula themes; `vifm` (above),
+  `nsxiv` and `htop` are themed too (`nsxiv` through `.Xresources`,
+  `htop` through the terminal palette; see
+  [Dracula themes](README.md#dracula-themes)).
 
 Optional and not listed in `packages.txt`: the `libnotify` package, which
 provides `notify-send`; `screenshot.pl` uses it for post-screenshot
@@ -514,12 +529,19 @@ notifications when present and silently skips the notification otherwise.
 | [`.config/spectrwm/screenshot.pl`](.config/spectrwm/screenshot.pl) | Screenshot helper called by the two screenshot bindings |
 | [`.config/spectrwm/initscreen.pl`](.config/spectrwm/initscreen.pl) | Display setup script run by spectrwm's `autorun` at start-of-day |
 | [`.xsession.ksh`](.xsession.ksh)            | X session script (installed as `~/.xsession`); starts the session and execs spectrwm |
-| [`.Xresources`](.Xresources)                | Dracula-like colors and xterm settings (font, no scrollbar, save lines) |
+| [`.Xresources`](.Xresources)                | Dracula colours for xterm, xlock and nsxiv (font, no scrollbar, save lines) |
 | [`.config/dunst/dunstrc`](.config/dunst/dunstrc) | Notification daemon configuration, matching Dracula theme |
 | [`xenodm/Xsetup_0.sh`](xenodm/Xsetup_0.sh)  | Login-screen root window setup (installed as `/etc/X11/xenodm/Xsetup_0`) |
-| [`.profile.ksh`](.profile.ksh)              | Login shell profile (environment for terminals, not spectrwm-specific) |
+| [`.profile.ksh`](.profile.ksh)              | Login shell profile (locale, PATH, `less`/`ls` colours, editor) |
+| [`root/.profile.ksh`](root/.profile.ksh)    | Root login shell profile (installed as `/root/.profile`) |
 | [`packages.txt`](packages.txt)              | Package list installed by the installer |
 | [`install.ksh`](install.ksh)                | Installer that copies the above files into place with the right modes |
+
+Dracula theme files for the TUI applications (vifm, kakoune, NeoMutt,
+tig, zathura, cmus, mpv, profanity, fastfetch, telescope, git and
+irssi) are installed under the same `~/.config` tree. See
+[Dracula themes](README.md#dracula-themes) in the README for the
+complete list.
 
 ## Customization
 

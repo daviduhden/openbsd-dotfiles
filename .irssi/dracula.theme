@@ -1,0 +1,74 @@
+# Dracula colours for irssi (colours only; default formats are kept).
+#
+# irssi copies its built-in abstracts and then applies the overrides
+# below, so only the listed abstract names need to be valid. They use
+# the format codes documented in docs/formats.txt (%K/%k/%r/%g/%y/%c/%m
+# map to the terminal palette, which is Dracula).
+#
+# Activate it once with:
+#   /theme dracula
+#   /save
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+default_color = "7";
+
+abstracts = {
+  # generic
+  line_start = "%B-%W!%B-%n";
+  hilight = "%_$0-%_";
+  channel = "%_$0-%_";
+  nick = "%_$0-%_";
+  nickhost = "%K(%r$0-%K)%n";
+  server = "%_$0-%_";
+  comment = "%K$0-%n";
+  reason = "[$0-]";
+
+  # messages
+  msgnick = "%K<%n$0$1-%K>%n %|";
+  ownmsgnick = "{msgnick $0 $1-}";
+  ownnick = "%c$0-%n";
+  pubmsgnick = "{msgnick $0 $1-}";
+  pubnick = "%N$0-%n";
+  pubmsgmenick = "{msgnick $0 $1-}";
+  menick = "%Y$0-%n";
+  pubmsghinick = "{msgnick $1 $0$2-%n}";
+  msgchannel = "%K:%c$*%n";
+
+  # private messages
+  privmsg = "[%R$0-%K(%r$1-%K)%n] ";
+  ownprivmsg = "[%r$0-%K(%R$1-%K)%n] ";
+  ownprivmsgnick = "{msgnick $*}";
+  ownprivnick = "%_$*%n";
+  privmsgnick = "{msgnick %R$*%n}";
+
+  # actions
+  action_core = "%_ * $0- %n";
+  action = "{action_core $0}";
+  ownaction = "{action $0-}";
+  ownaction_target = "{action_core $0}%K:%c$1%n ";
+  pvtaction = "%W (*) $0-%n ";
+  pvtaction_query = "%M{action $0-}";
+  pubaction = "{action $0-}";
+
+  # notices
+  ownnotice = "[%r$0-]%n ";
+  notice = "%K-%M$0-%K-%n ";
+  pubnotice_channel = "%K:%m$1";
+  pvtnotice_host = "%K(%m$0-%K)%n";
+  servernotice = "%g!$0-%n ";
+
+  # ctcp
+  ownctcp = "[%r$0-] ";
+  ctcp = "%g$0-%n";
+
+  # dcc
+  dcc = "%g$0-%n";
+  dccfile = "%_$0-%_";
+  dccownmsg = "[%r$0-%n] ";
+  dccownnick = "%K(%R$1%K)%n";
+  dccmsg = "[%G$0-%n] ";
+  dccquerynick = "%G$0-%n";
+  dccaction = "%W (*dcc*) $0-%n %|";
+};

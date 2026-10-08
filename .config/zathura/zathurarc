@@ -1,0 +1,58 @@
+# Dracula theme for zathura
+#
+# zathura accepts true-colour rgba() values, so the exact Dracula
+# palette is used here instead of the terminal colours.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+set window-title-basename "true"
+set selection-clipboard "clipboard"
+
+# Notifications ---------------------------------------------------------------
+set notification-error-bg       rgba(255,85,85,1)     # red
+set notification-error-fg       rgba(248,248,242,1)   # foreground
+set notification-warning-bg     rgba(255,184,108,1)   # orange
+set notification-warning-fg     rgba(68,71,90,1)      # selection
+set notification-bg             rgba(40,42,54,1)      # background
+set notification-fg             rgba(248,248,242,1)   # foreground
+
+# Completion ----------------------------------------------------------------
+set completion-bg               rgba(40,42,54,1)      # background
+set completion-fg               rgba(98,114,164,1)    # comment
+set completion-group-bg         rgba(40,42,54,1)      # background
+set completion-group-fg         rgba(98,114,164,1)    # comment
+set completion-highlight-bg     rgba(68,71,90,1)      # selection
+set completion-highlight-fg     rgba(248,248,242,1)   # foreground
+
+# Index ---------------------------------------------------------------------
+set index-bg                    rgba(40,42,54,1)      # background
+set index-fg                    rgba(248,248,242,1)   # foreground
+set index-active-bg             rgba(68,71,90,1)      # current line
+set index-active-fg             rgba(248,248,242,1)   # foreground
+
+# Status/input bar ----------------------------------------------------------
+set inputbar-bg                 rgba(40,42,54,1)      # background
+set inputbar-fg                 rgba(248,248,242,1)   # foreground
+set statusbar-bg                rgba(40,42,54,1)      # background
+set statusbar-fg                rgba(248,248,242,1)   # foreground
+
+# Highlights ----------------------------------------------------------------
+set highlight-color             rgba(255,184,108,0.5) # orange
+set highlight-active-color      rgba(255,121,198,0.5) # pink
+
+# Page ----------------------------------------------------------------------
+set default-bg                  rgba(40,42,54,1)      # background
+set default-fg                  rgba(248,248,242,1)   # foreground
+
+set render-loading              true
+set render-loading-fg           rgba(40,42,54,1)      # background
+set render-loading-bg           rgba(248,248,242,1)   # foreground
+
+# Recolour mode (used for documents without their own background) -----------
+set recolor-lightcolor          rgba(40,42,54,1)      # background
+set recolor-darkcolor           rgba(248,248,242,1)   # foreground
+
+# Startup options -----------------------------------------------------------
+set adjust-open width
+set recolor true

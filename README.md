@@ -16,10 +16,15 @@ The script requires root and requires an existing, non-root target account. When
 - optionally adds `permit persist user as root` to `/etc/doas.conf`, after checking the complete candidate file with `doas -C`;
 - asks for the X keyboard layout: Spanish - Spain (`es`, the default) or
   English - United States (`us`); the choice is written into the installed
-  `~/.xsession`;
+  `~/.xsession`, and the matching locale (`es_ES.UTF-8` or `en_US.UTF-8`)
+  is written into `~/.xsession`, `~/.profile` and `/root/.profile`
+  (`LC_COLLATE=C` is kept);
 - installs the spectrwm and dunst files under the target user's
   `~/.config`, including the status script used by the native spectrwm bar;
+- writes the Dracula theme files under `~/.config` (and `~/.irssi`), see
+  [Dracula themes](#dracula-themes);
 - installs `.xsession`, `.Xresources` and `.profile` for that user;
+- installs the root profile to `/root/.profile`;
 - replaces `/etc/X11/xenodm/Xsetup_0` with the included neutral root-weave setup;
 - changes the user's login shell to the base-system `/bin/ksh`.
 
@@ -37,17 +42,19 @@ instead. The package installation and login-shell change are not separately
 prompted.
 
 Non-interactive use: setting the environment variable `KEYBOARD_LAYOUT=es`
-or `KEYBOARD_LAYOUT=us` preselects the keyboard layout and skips that
-prompt; any other value is rejected.
+or `KEYBOARD_LAYOUT=us` preselects the keyboard layout (and the matching
+locale) and skips that prompt; any other value is rejected.
 
 ## Session behaviour
 
-`.xsession` applies the keyboard layout selected by the installer
-(`setxkbmap es nodeadkeys` or `setxkbmap us`, chosen through the
-`KEYBOARD_LAYOUT` line), loads X resources, starts `openbsd-wallpaper` and
-`dunst` when present, then executes spectrwm. It does not disable the X
-screen saver or DPMS. `Mod4+Shift+L` invokes `xlock`; no automatic idle
-lock is configured.
+`.xsession` first sets a predictable `PATH` covering the base system,
+Xenocara and the `/usr/local` port prefix (xenodm may start the session
+with a minimal environment), then applies the keyboard layout and the
+matching locale selected by the installer (`setxkbmap es nodeadkeys` or
+`setxkbmap us`, chosen through the `KEYBOARD_LAYOUT` line), loads X
+resources, starts `openbsd-wallpaper` and `dunst` when present, then
+executes spectrwm. It does not disable the X screen saver or DPMS.
+`Mod4+Shift+L` invokes `xlock`; no automatic idle lock is configured.
 
 The status bar is spectrwm's native bar. Workspaces and the focused window
 title are rendered by spectrwm itself, and the date and time come from the
@@ -73,12 +80,49 @@ The spectrwm clipboard command explicitly uses `sh -c` because spectrwm executes
 
 The configuration assumes the package prefix `/usr/local`. Dunst uses its recursive Freedesktop icon lookup with the `hicolor` theme instead of a Linux-specific `/usr/share/icons` path.
 
+## Dracula themes
+
+The palette is Dracula everywhere, and every theme file lives in this
+repository. Themes that rely on the terminal use the 8/16 ANSI colour
+names, which `.Xresources` maps to the Dracula colours; zathura,
+kakoune and mpv use true-colour values.
+
+| Application | File |
+| --- | --- |
+| xterm | `.Xresources` (`color0`-`color15`, foreground, background, cursor) |
+| dmenu | `program[menu]` in `.config/spectrwm/spectrwm.conf` |
+| spectrwm | `.config/spectrwm/spectrwm.conf` |
+| dunst | `.config/dunst/dunstrc` |
+| xlock / nsxiv | `XLock.*` / `Nsxiv.*` in `.Xresources` |
+| less / ls / tree | `LESS_TERMCAP_*` / `LSCOLORS`+`LS_COLORS` in `.profile.ksh` |
+| vifm | `.config/vifm/vifmrc` + `colors/dracula.vifm` |
+| kakoune | `.config/kak/kakrc` + `colors/dracula.kak` |
+| NeoMutt | `.config/neomutt/neomuttrc` + `dracula.muttrc` |
+| tig | `.config/tig/config` |
+| zathura | `.config/zathura/zathurarc` |
+| cmus | `.config/cmus/rc` + `dracula.theme` |
+| mpv | `.config/mpv/mpv.conf` + `script-opts/osc.conf` |
+| profanity | `.config/profanity/profrc` + `themes/dracula` |
+| fastfetch | `.config/fastfetch/config.jsonc` |
+| telescope | `.config/telescope/config` |
+| git | `.config/git/config` (read before `~/.gitconfig`) |
+| irssi | `.irssi/dracula.theme` |
+
+`ls` colour output is enabled by the installer (`CLICOLOR=1` with a
+Dracula `LSCOLORS`); set `CLICOLOR=0` in `~/.profile` to turn it off.
+The vifm configuration is intentionally minimal (it only selects the
+colourscheme), so vifm's default file associations are not shipped.
+irssi regenerates `~/.irssi/config`, so only its theme file is shipped:
+load it once with `/theme dracula` and keep it with `/save`. htop needs
+no theme file: it uses the terminal's ANSI palette, which is already
+Dracula.
+
 ## Static maintenance checks
 
 On OpenBSD, useful non-executing checks are:
 
 ```sh
-$ ksh -n install.ksh .profile.ksh .xsession.ksh
+$ ksh -n install.ksh .profile.ksh root/.profile.ksh .xsession.ksh
 $ perl -c .config/spectrwm/initscreen.pl \
     .config/spectrwm/screenshot.pl .config/spectrwm/statusbar.pl
 $ sh -n xenodm/Xsetup_0.sh

@@ -34,11 +34,25 @@ xterm*faceName: xft:Noto Sans Mono:style=Regular
 xterm*faceSize: 10
 
 xterm*scrollBar: false
-xterm*scrollBarRight: false
 xterm*rightScrollBar: false
 xterm*toolBar: false
 
 xterm*saveLines: 5000
 xterm*bellIsUrgent: true
 xterm*visualBell: false
+
+! -------------------------------------------------
+! xlock (screen locker)
+! -------------------------------------------------
+XLock.foreground: #f8f8f2
+XLock.background: #282a36
+
+! -------------------------------------------------
+! nsxiv (image viewer)
+! -------------------------------------------------
+Nsxiv.window.background: #282a36
+Nsxiv.window.foreground: #f8f8f2
+Nsxiv.bar.background:   #21222c
+Nsxiv.bar.foreground:   #f8f8f2
+Nsxiv.mark.foreground:  #50fa7b
 

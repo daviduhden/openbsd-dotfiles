@@ -64,7 +64,7 @@
     context = ctrl+shift+period
 
     ### Misc
-    browser = xdg-open
+    browser = /usr/local/bin/xdg-open
     always_run_script = true
     title = Dunst
     class = Dunst

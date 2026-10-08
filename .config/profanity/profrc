@@ -1,0 +1,10 @@
+# Profanity configuration
+#
+# Selects the Dracula theme shipped in
+# ~/.config/profanity/themes/dracula.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+[ui]
+theme=dracula

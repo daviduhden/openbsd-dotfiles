@@ -1,0 +1,10 @@
+# cmus configuration
+#
+# cmus rewrites this file on exit, adding the settings changed in the
+# interface; the line below only selects the Dracula colourscheme
+# shipped in ~/.config/cmus/dracula.theme.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+colorscheme dracula

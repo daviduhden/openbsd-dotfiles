@@ -43,7 +43,14 @@ use if $^O eq 'openbsd', 'OpenBSD::Unveil';
 my $scrot  = '/usr/local/bin/scrot';
 my $notify = '/usr/local/bin/notify-send';
 
-my $dir  = ( $ENV{HOME} // '' ) . '/Pictures/Screenshots';
+# $dir is built from HOME and is unveiled below; refuse to fall
+# back to "/Pictures/Screenshots" when HOME is not set.
+if ( !defined $ENV{HOME} || $ENV{HOME} eq '' ) {
+    print STDERR "HOME is not set\n";
+    exit 1;
+}
+
+my $dir  = "$ENV{HOME}/Pictures/Screenshots";
 my $mode = @ARGV ? $ARGV[0] : 'full';
 
 if ( $mode ne 'full' && $mode ne 'window' ) {
@@ -57,7 +64,12 @@ if ( !-x $scrot ) {
 }
 
 # All filesystem and timezone access happens before the sandbox.
-make_path($dir);
+if ( !-d $dir ) {
+    eval { make_path($dir); 1 } or do {
+        print STDERR "Cannot create $dir: $@";
+        exit 1;
+    };
+}
 my $stamp          = strftime( '%Y-%m-%d_%H-%M-%S', localtime );
 my $outfile        = "${dir}/screenshot_${mode}_${stamp}.png";
 my $have_notify    = -x $notify;

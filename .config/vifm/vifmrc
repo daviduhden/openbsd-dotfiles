@@ -1,0 +1,11 @@
+" Minimal vifmrc for the Dracula setup.
+"
+" vifm ships with built-in defaults, so this file only selects the
+" Dracula colourscheme; add your own settings below. The palette
+" itself comes from ~/.Xresources, so the colourscheme uses the
+" 8/16 ANSI colour names.
+"
+" See the LICENSE file at the top of the project tree for copyright
+" and license details.
+
+colorscheme dracula

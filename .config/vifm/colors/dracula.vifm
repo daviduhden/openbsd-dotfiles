@@ -1,0 +1,32 @@
+" Dracula colourscheme for vifm
+"
+" Uses the 8/16 ANSI colours, which the Dracula xterm palette in
+" ~/.Xresources maps to the Dracula palette (blue is purple, magenta
+" is pink, and so on).
+"
+" See the LICENSE file at the top of the project tree for copyright
+" and license details.
+
+highlight clear
+
+highlight Win         cterm=none ctermfg=default ctermbg=none
+
+highlight TopLine     cterm=none ctermfg=blue    ctermbg=none
+highlight TopLineSel  cterm=none ctermfg=magenta ctermbg=none
+highlight StatusLine  cterm=none ctermfg=blue    ctermbg=none
+highlight Border      cterm=none ctermfg=blue    ctermbg=none
+
+highlight Selected    cterm=bold ctermfg=magenta ctermbg=default
+highlight CurrLine    cterm=bold ctermfg=black   ctermbg=blue
+
+highlight WildMenu    cterm=none,reverse ctermfg=blue ctermbg=black
+highlight CmdLine     cterm=none ctermfg=white ctermbg=black
+highlight ErrorMsg    cterm=none ctermfg=red   ctermbg=black
+
+highlight Directory   cterm=none ctermfg=blue    ctermbg=default
+highlight Link        cterm=none ctermfg=cyan    ctermbg=default
+highlight BrokenLink  cterm=none ctermfg=red     ctermbg=default
+highlight Socket      cterm=none ctermfg=magenta ctermbg=black
+highlight Device      cterm=none ctermfg=red     ctermbg=default
+highlight Fifo        cterm=none ctermfg=yellow  ctermbg=black
+highlight Executable  cterm=none ctermfg=green   ctermbg=default

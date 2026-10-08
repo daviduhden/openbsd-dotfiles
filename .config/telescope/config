@@ -1,0 +1,10 @@
+# Telescope configuration
+#
+# Telescope only enables colours; the palette itself comes from the
+# terminal (the Dracula xterm palette in ~/.Xresources).
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+set enable-colors = 1
+set fill-column = 80

@@ -177,6 +177,7 @@ sub run_capture {
     my $pid = open( my $fh, '-|' );
     return unless defined $pid;
     if ( $pid == 0 ) {
+        open STDIN,  '<&', $null_fh or exit 1;
         open STDERR, '>&', $null_fh or exit 1;
         exec @$cmd;
         exit 1;
@@ -326,14 +327,14 @@ sub first_active_iface {
     my ( $name, $active ) = ( undef, 0 );
     for my $line ( split( "\n", $out ) ) {
         if ( $line =~ /^([a-zA-Z][a-zA-Z0-9]*):/ ) {
-            return $name if $active && $name ne 'lo0';
+            return $name if $active && defined $name && $name ne 'lo0';
             ( $name, $active ) = ( $1, 0 );
         }
         elsif ( $line =~ /status: active/ ) {
             $active = 1;
         }
     }
-    return ( $active && $name ne 'lo0' ) ? $name : undef;
+    return ( $active && defined $name && $name ne 'lo0' ) ? $name : undef;
 }
 
 sub get_net {
@@ -460,6 +461,7 @@ sub service_running {
     my $pid = open( my $fh, '-|' );
     return 0 unless defined $pid;
     if ( $pid == 0 ) {
+        open STDIN,  '<&', $null_fh or exit 1;
         open STDOUT, '>&', $null_fh or exit 1;
         open STDERR, '>&', $null_fh or exit 1;
         exec $CMD{rcctl}, 'check', $svc;

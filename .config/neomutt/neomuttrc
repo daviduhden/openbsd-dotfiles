@@ -1,0 +1,7 @@
+# NeoMutt configuration
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+# Dracula theme (shipped in ~/.config/neomutt/dracula.muttrc).
+source ~/.config/neomutt/dracula.muttrc

@@ -14,9 +14,18 @@
 # Environment
 # -------------------------------------------------
 
-# Locale
+# Predictable PATH: xenodm may start the session with a minimal
+# environment, so make sure the Xenocara and port prefixes are
+# searchable (spectrwm, dunst and the X utilities live there).
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/X11R6/bin:/usr/local/sbin:/usr/local/bin
+export PATH
+
+# Locale. LC_ALL is deliberately not set: it would override the
+# per-category values below (notably LC_COLLATE=C) and diverge
+# from the login profile.
 export LANG=es_ES.UTF-8
-export LC_ALL=es_ES.UTF-8
+export LC_CTYPE=es_ES.UTF-8
+export LC_COLLATE=C
 
 # XDG base directories
 export XDG_CONFIG_HOME="$HOME/.config"

@@ -30,7 +30,7 @@ my @entries;
 
 while ( my $line = <$in> ) {
     chomp $line;    # remove newline for consistent sorting
-    if ( $line =~ /^#/ ) {
+    if ( $line =~ /^\s*#/ ) {
         push @comments, $line;
     }
     elsif ( $line =~ /\S/ ) {

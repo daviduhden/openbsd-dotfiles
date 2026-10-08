@@ -1,0 +1,75 @@
+# Dracula theme for profanity
+#
+# Uses the 16 ANSI colour names, which the Dracula xterm palette in
+# ~/.Xresources maps to the Dracula palette; bold_black is the bright
+# black used for comments.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+[colours]
+bkgnd=black
+
+titlebar=black
+titlebar.text=white
+titlebar.brackets=blue
+titlebar.online=green
+titlebar.away=yellow
+titlebar.dnd=red
+titlebar.chat=cyan
+titlebar.offline=bold_black
+titlebar.xa=magenta
+
+statusbar=black
+statusbar.text=white
+statusbar.brackets=blue
+statusbar.active=green
+statusbar.new=magenta
+statusbar.time=bold_black
+
+main.text=white
+main.text.me=cyan
+main.text.them=magenta
+main.text.history=bold_black
+main.time=bold_black
+main.splash=blue
+main.help.header=blue
+
+input.text=white
+
+error=red
+
+away=yellow
+chat=cyan
+dnd=red
+gone=bold_black
+incoming=green
+mention=yellow
+me=cyan
+offline=bold_black
+online=green
+receipt.sent=bold_black
+roominfo=blue
+roommention=yellow
+roomtrigger=magenta
+unsubscribed=bold_black
+untrusted=bold_black
+
+roster.header=blue
+roster.online=green
+roster.away=yellow
+roster.dnd=red
+roster.xa=magenta
+roster.offline=bold_black
+roster.room=cyan
+roster.room.unread=magenta
+roster.room.mention=magenta
+roster.room.trigger=magenta
+
+occupants.header=blue
+
+otr.trusted=green
+otr.untrusted=red
+otr.ended=bold_black
+otr.started.trusted=green
+otr.started.untrusted=red

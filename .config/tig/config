@@ -1,0 +1,26 @@
+# Dracula theme for tig
+#
+# tig is limited to the 8/16 ANSI colours, which the Dracula xterm
+# palette in ~/.Xresources maps to the Dracula palette (blue is
+# purple, magenta is pink, and so on). Git's own colours are disabled
+# so that these rules are the only source of colour.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+set git-colors = no
+
+color cursor         black   green
+color search-result  black   yellow
+color line-number    red     black
+color title-focus    black   yellow
+color title-blur     black   magenta
+
+# Diff colours
+color diff-header    yellow  default
+color diff-index     blue    default
+color diff-chunk     magenta default
+color "Reported-by:" green   default
+
+# View-specific colour
+color tree.date      black   cyan    bold

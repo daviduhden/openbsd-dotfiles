@@ -1,0 +1,45 @@
+# Dracula colour theme for NeoMutt
+#
+# Uses the 8/16 ANSI colours, which the Dracula xterm palette in
+# ~/.Xresources maps to the Dracula palette (blue is purple, magenta
+# is pink, and so on); colour8 is the bright black used for comments.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+# General -------------------------------------------------------------------
+color error        black   red
+color indicator    black   magenta
+color markers      yellow  default
+color message      white   default
+color normal       white   default
+color prompt       white   default
+color search       black   blue
+color status       black   magenta
+color tilde        white   default
+color tree         magenta default
+color hdrdefault   color8  default
+
+# Message index -------------------------------------------------------------
+color index        yellow  default  ~D
+color index        cyan    default  ~F
+color index        cyan    default  ~N
+color index        magenta default  ~Q
+color index        red     default  ~T
+color index        color8  default  ~v
+
+# Message headers -----------------------------------------------------------
+color header       white   default  "^(From|To|Cc|Bcc|Date|Subject|Reply-To|Sender|Message-ID):"
+color header       magenta default  "^(X-.*|User-Agent|MIME-Version):"
+
+# Message body --------------------------------------------------------------
+color attachment   yellow  default
+color signature    magenta default
+color quoted       color8  default
+color quoted1      cyan    default
+color quoted2      green   default
+color quoted3      yellow  default
+color quoted4      magenta default
+color body         yellow  default  "(https?|ftp)://[-.,/%~_:?&=a-zA-Z0-9]+"
+color body         green   default  "(^|[[:space:]])[*][^[:space:]]+[*]([[:space:]]|$)"
+color body         cyan    default  "(^|[[:space:]])_[^[:space:]]+_([[:space:]]|$)"
