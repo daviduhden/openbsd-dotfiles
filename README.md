@@ -85,15 +85,6 @@ $ sh -n xenodm/Xsetup_0.sh
 $ doas -C /etc/doas.conf
 ```
 
-The mock-based regression suite exercises the status script against the
-verified OpenBSD command output formats and the installer keyboard-layout
-logic; it needs no root privileges and touches nothing outside its
-temporary directory:
-
-```sh
-$ ksh tests/statusbar_test.ksh
-```
-
 Spectrwm and Dunst should also be started from a terminal after upgrades so that either program can report configuration keys removed by a newer package version.
 
 ## References
