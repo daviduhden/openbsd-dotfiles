@@ -7,15 +7,13 @@
 # It sets up one internal display and one external display
 # (if connected) side by side.
 #
-# Sandbox (OpenBSD only, via base OpenBSD::Pledge/OpenBSD::Unveil):
+# Sandbox (OpenBSD only, via base OpenBSD::Unveil):
 #   unveil    xrandr(1), the dynamic linker, the shared
 #             libraries (X11 lives under /usr/X11R6/lib), the
 #             Xauthority file and the X server socket.
-#   pledge    "proc exec" (plus implied stdio); the xrandr child
-#             runs unpledged and does the socket work itself.
-#             A sandbox misconfiguration kills the script with
-#             an explicit error; diagnose with ktrace(1) or the
-#             'U' flag in lastcomm(1).
+#   The launcher stays unpledged because it executes external programs.
+#   The locked view restricts this parent's pathname operations; execve
+#   clears it in the children, which can apply their own security policy.
 #
 # The X server is assumed to listen on the local unix socket
 # (/tmp/.X11-unix); a remote DISPLAY (TCP) will not work under
@@ -26,7 +24,6 @@
 
 use strict;
 use warnings;
-use if $^O eq 'openbsd', 'OpenBSD::Pledge';
 use if $^O eq 'openbsd', 'OpenBSD::Unveil';
 
 my $xrandr = '/usr/X11R6/bin/xrandr';
@@ -55,7 +52,6 @@ if ( $^O eq 'openbsd' ) {
     }
     unveil( '/tmp/.X11-unix', 'w' ) or die "unveil X socket dir: $!";
     unveil()                        or die "unable to lock unveil: $!";
-    pledge( 'proc', 'exec' )        or die "unable to pledge: $!";
 }
 
 my $out;

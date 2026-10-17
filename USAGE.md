@@ -352,8 +352,7 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
   low-battery threshold.
 
 * **Sandbox:** on OpenBSD the three helper scripts restrict themselves
-  with base Perl's `OpenBSD::Pledge` and `OpenBSD::Unveil` modules (the
-  XS interfaces to `pledge(2)`/`unveil(2)`; no extra packages):
+  with base Perl's `OpenBSD::Unveil` module (no extra packages):
 
   * `statusbar.pl` - `unveil`: the data-gathering executables (`x`), the
     apm socket `/var/run/apmdev` (`w`) and device `/dev/apm` (`r`), the
@@ -364,22 +363,19 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     (`/usr/sbin/rcctl` `rx`, `/bin/ksh` `x`, `/etc/rc.d/tor` `rx`,
     `/etc/rc.d/rc.subr`/`/etc/rc.conf`/`local` `r`,
     `grep`/`id`/`pgrep` `x`), the dynamic linker `rx` and `/usr/lib` `r`.
-    `pledge`: `proc exec` (plus implied `stdio`).
   * `initscreen.pl` - `unveil`: `xrandr` (`x`), the Xauthority file
     (`r`), `/tmp/.X11-unix` (`w`), the dynamic linker `rx`,
-    `/usr/lib`/`/usr/X11R6/lib` `r`. `pledge`: `proc exec`.
+    `/usr/lib`/`/usr/X11R6/lib` `r`.
   * `screenshot.pl` - `unveil`: `scrot` and `notify-send` (`x`), the
     screenshot directory (`rwc`), the Xauthority file (`r`),
     `/tmp/.X11-unix` (`w`), the dynamic linker `rx` and the shared
-    library directories `r`. `pledge`: `proc exec`.
+    library directories `r`.
 
-  Children are exec'd without `execpromises`, so they run unpledged and
-  only the parent needs `proc`/`exec`. unveil is locked before the main
-  work and a failing `pledge`/`unveil` call kills the script with an
-  explicit error (never silently ignored); diagnose with `ktrace(1)` or
-  the `U` flag in `lastcomm(1)`. X11 access assumes the default xenodm
-  setup with a local unix socket; a TCP `DISPLAY` will not work under
-  the sandbox.
+  The launchers stay unpledged because they execute other programs. Their
+  locked unveil rules constrain parent pathname operations; execve clears
+  the view in children, which install their own sandbox. There is no parent
+  syscall ceiling. A failing unveil call is fatal. Diagnose pathname denials
+  with the U flag in lastcomm(1). X11 assumes a local unix socket.
 * **Colors** (semantics only; values are Dracula palette entries):
   * `bar_color` / `bar_color_unfocus` - bar background for the focused and
     unfocused regions; `bar_color_free` - bar background while a
@@ -486,7 +482,7 @@ These are used by the configuration and need no package installation:
   (`awk`, `grep`, `head`, `printf`, `date`, `mkdir`, `sleep`).
   The spectrwm helper scripts are Perl (`/usr/bin/perl`, base system)
   and parse all command output themselves; on OpenBSD they sandbox
-  themselves with the `OpenBSD::Pledge` and `OpenBSD::Unveil` modules
+  themselves with the `OpenBSD::Unveil` module
   shipped with base Perl. The status-bar script additionally uses only
   base commands: `sysctl`, `vmstat`, `apm`, `ifconfig`, `netstat` and
   `rcctl`.

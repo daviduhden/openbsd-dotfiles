@@ -27,17 +27,14 @@
 # command failures are handled at their source so that
 # diagnostics never reach the bar.
 #
-# Sandbox (OpenBSD only, via base OpenBSD::Pledge/OpenBSD::Unveil):
+# Sandbox (OpenBSD only, via base OpenBSD::Unveil):
 #   unveil    the data-gathering tools and the files needed by
 #             the rcctl(8) Tor check chain, the sndiod(8) control
 #             sockets and session cookie, the dynamic linker and
 #             the shared libraries; locked before the loop.
-#   pledge    "proc exec" (plus implied stdio). Children run
-#             unpledged, so no network/route promises are needed
-#             in this process. A sandbox misconfiguration kills
-#             the script with an explicit error instead of being
-#             silently ignored; diagnose with ktrace(1) or the
-#             'U' flag in lastcomm(1).
+#   The launcher stays unpledged because it executes external programs.
+#   The locked view restricts this parent's pathname operations; execve
+#   clears it in the children, which can apply their own security policy.
 #
 # Optional arguments, useful for testing and manual runs:
 #   statusbar.pl [iterations]      limit the number of cycles
@@ -50,7 +47,6 @@
 use strict;
 use warnings;
 use POSIX ();
-use if $^O eq 'openbsd', 'OpenBSD::Pledge';
 use if $^O eq 'openbsd', 'OpenBSD::Unveil';
 
 $SIG{PIPE} = 'DEFAULT';    # exit when spectrwm closes the pipe
@@ -152,7 +148,6 @@ if ( $^O eq 'openbsd' ) {
     unveil( '/usr/libexec/ld.so', 'rx' ) or die "unveil ld.so: $!";
     unveil( '/usr/lib', 'r' )            or die "unveil /usr/lib: $!";
     unveil()                             or die "unable to lock unveil: $!";
-    pledge( 'proc', 'exec' )             or die "unable to pledge: $!";
 }
 
 # This script runs no X11 clients; keep the children away from

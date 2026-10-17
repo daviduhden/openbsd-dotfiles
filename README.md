@@ -69,11 +69,11 @@ clock markers in `bar_format` use the same fallback. There is no external
 bar: Lemonbar is neither installed nor started.
 
 On OpenBSD, the spectrwm helper scripts (`statusbar.pl`, `initscreen.pl`,
-`screenshot.pl`) sandbox themselves with `pledge(2)`/`unveil(2)` through
-the `OpenBSD::Pledge` and `OpenBSD::Unveil` modules shipped with base
-Perl: they unveil only the executables, devices and files each script
-demonstrably needs, lock unveil, and pledge `proc exec` (plus the
-implied `stdio`). A failing `pledge`/`unveil` call aborts the script
+`screenshot.pl`) restrict their own pathname access through `OpenBSD::Unveil` from base
+Perl. They unveil the executables, devices and files each script needs,
+then lock the view. They stay unpledged because they execute external
+programs; those children start with a fresh filesystem view after execve.
+There is no launcher syscall ceiling. A failing `unveil` call aborts the script
 with an explicit error rather than being ignored.
 
 The spectrwm clipboard command explicitly uses `sh -c` because spectrwm executes configured programs directly and does not interpret a pipeline itself. Screenshots use `Mod4+Print` for all monitors and `Mod4+Shift+Print` for an interactive selection.

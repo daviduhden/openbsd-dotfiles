@@ -11,19 +11,15 @@
 # Saves screenshots to ~/Pictures/Screenshots/
 # Creates the directory if it doesn't exist
 #
-# Sandbox (OpenBSD only, via base OpenBSD::Pledge/OpenBSD::Unveil):
+# Sandbox (OpenBSD only, via base OpenBSD::Unveil):
 #   unveil    scrot(1), optionally notify-send(1), the target
 #             directory, the Xauthority file, the X server
 #             socket, the dynamic linker and the shared
 #             libraries (including /usr/local/lib for the
 #             scrot dependencies).
-#   pledge    "proc exec" (plus implied stdio); the scrot child
-#             runs unpledged and does the X11 and file work
-#             itself. Directory creation and timestamp
-#             formatting happen before the sandbox. A sandbox
-#             misconfiguration kills the script with an explicit
-#             error; diagnose with ktrace(1) or the 'U' flag in
-#             lastcomm(1).
+#   The launcher stays unpledged because it executes external programs.
+#   The locked view restricts this parent's pathname operations; execve
+#   clears it in the children, which can apply their own security policy.
 #
 # The X server is assumed to listen on the local unix socket
 # (/tmp/.X11-unix); a remote DISPLAY (TCP) will not work under
@@ -37,7 +33,6 @@ use warnings;
 use POSIX          qw(strftime);
 use File::Basename qw(basename);
 use File::Path     qw(make_path);
-use if $^O eq 'openbsd', 'OpenBSD::Pledge';
 use if $^O eq 'openbsd', 'OpenBSD::Unveil';
 
 my $scrot  = '/usr/local/bin/scrot';
@@ -101,7 +96,6 @@ if ( $^O eq 'openbsd' ) {
         unveil( '/usr/local/lib', 'r' ) or die "unveil /usr/local/lib: $!";
     }
     unveil()                 or die "unable to lock unveil: $!";
-    pledge( 'proc', 'exec' ) or die "unable to pledge: $!";
 }
 
 my @args = ( '-m', $outfile );
