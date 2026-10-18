@@ -89,8 +89,10 @@ my %CMD = (
 );
 
 # /dev/null is opened before the sandbox; children dup2() this
-# descriptor to discard stdout/stderr without opening files.
-open my $null_fh, '<', '/dev/null' or die "cannot open /dev/null: $!";
+# descriptor to discard stdout/stderr without opening files, so it
+# deliberately lives for the whole process.
+open my $null_fh, '<', '/dev/null'    ## no critic (RequireBriefOpen)
+  or die "cannot open /dev/null: $!";
 
 # The sndio session cookie lives in ~/.sndio. The directory is
 # created here, before the first unveil(2) restricts the filesystem
@@ -146,8 +148,8 @@ if ( $^O eq 'openbsd' ) {
     # dynamically linked children need the linker and the
     # shared libraries (versioned names, so the directory)
     unveil( '/usr/libexec/ld.so', 'rx' ) or die "unveil ld.so: $!";
-    unveil( '/usr/lib', 'r' )            or die "unveil /usr/lib: $!";
-    unveil()                             or die "unable to lock unveil: $!";
+    unveil( '/usr/lib',           'r' )  or die "unveil /usr/lib: $!";
+    unveil() or die "unable to lock unveil: $!";
 }
 
 # This script runs no X11 clients; keep the children away from
@@ -166,7 +168,7 @@ my ( $traffic_rx, $traffic_tx, $traffic_time );
 # The command's stderr is discarded: the failures are expected
 # (missing hardware, unset interfaces) and must not reach the
 # X session log on every cycle. Returns undef when the command
-# cannot be executed.
+# cannot be executed or exits unsuccessfully.
 sub run_capture {
     my ($cmd) = @_;
     my $pid = open( my $fh, '-|' );
@@ -174,12 +176,12 @@ sub run_capture {
     if ( $pid == 0 ) {
         open STDIN,  '<&', $null_fh or exit 1;
         open STDERR, '>&', $null_fh or exit 1;
-        exec @$cmd;
+        exec @{$cmd};
         exit 1;
     }
-    my $out = do { local $/; <$fh> };
-    close $fh;
-    chomp($out);
+    my $out = do { local $/ = undef; <$fh> };
+    close $fh or return;
+    chomp $out;
     return $out;
 }
 
@@ -194,7 +196,7 @@ sub get_cpu {
     my $out = run_capture( [ $CMD{sysctl}, '-n', 'kern.cp_time' ] );
     return unless defined $out;
     my @v = split( ' ', $out );
-    return unless @v >= 5;
+    return if @v < 5;
     for (@v) {
         return unless /^\d+$/;
     }
@@ -231,7 +233,7 @@ sub get_volume {
     my $out = run_capture( [ $CMD{sndioctl} ] );
     return unless defined $out;
     my ( $level, $mute );
-    for my $line ( split "\n", $out ) {
+    for my $line ( split /\n/, $out ) {
         if ( $line =~ /^output\.level=(\d+(?:\.\d+)?)/ ) {
             $level = $1;
         }
@@ -239,7 +241,8 @@ sub get_volume {
             $mute = $1;
         }
     }
-    return unless defined $level && $level <= 1;
+    return unless defined $level;
+    return if $level > 1;
     my $icon;
     if ($mute) {
         $icon = '🔇';
@@ -269,8 +272,8 @@ sub get_mem {
     $total = $1;
     my $vm = run_capture( [ $CMD{vmstat} ] );
     return unless defined $vm;
-    my @lines = split( "\n", $vm );
-    return unless @lines >= 3;
+    my @lines = split( /\n/, $vm );
+    return if @lines < 3;
     my @hdr = split( ' ', $lines[1] );
     my ( $col, $i ) = ( undef, 0 );
 
@@ -286,7 +289,7 @@ sub get_mem {
     my $fre  = $data[$col];
     return unless defined $fre && $fre =~ /^(\d+)M$/;
     $fre = $1;
-    my $tmb = $total / 1048576;
+    my $tmb = $total / 1_048_576;
     return if $fre >= $tmb;
     my $umb = $tmb - $fre;
 
@@ -320,7 +323,7 @@ sub first_active_iface {
     my $out = run_capture( [ $CMD{ifconfig} ] );
     return unless defined $out;
     my ( $name, $active ) = ( undef, 0 );
-    for my $line ( split( "\n", $out ) ) {
+    for my $line ( split( /\n/, $out ) ) {
         if ( $line =~ /^([a-zA-Z][a-zA-Z0-9]*):/ ) {
             return $name if $active && defined $name && $name ne 'lo0';
             ( $name, $active ) = ( $1, 0 );
@@ -336,7 +339,7 @@ sub get_net {
     my $iface;
     my $routes = run_capture( [ $CMD{netstat}, '-rn' ] );
     if ( defined $routes ) {
-        for my $line ( split( "\n", $routes ) ) {
+        for my $line ( split( /\n/, $routes ) ) {
             if ( $line =~ /^default\s/ ) {
                 my @f = split( ' ', $line );
                 $iface = $f[-1];
@@ -356,7 +359,7 @@ sub get_net {
     return unless defined $info;
 
     my ( $ip, $ssid );
-    for my $line ( split( "\n", $info ) ) {
+    for my $line ( split( /\n/, $info ) ) {
         if ( !defined $ip && $line =~ /^\s*inet (\S+)/ ) {
 
             # primary IPv4 address
@@ -381,10 +384,10 @@ sub get_net {
         }
     }
     my $field =
-        ( $ssid ? '📶' : '🔗' )
+        ( defined $ssid ? '📶' : '🔗' )
       . " $iface "
-      . ( $ssid       ? "$ssid " : '' )
-      . ( defined $ip ? $ip      : 'no ip' );
+      . ( defined $ssid ? "$ssid " : '' )
+      . ( defined $ip   ? $ip      : 'no ip' );
     return { field => $field, iface => $iface };
 }
 
@@ -396,11 +399,11 @@ sub get_net {
 sub rate {
     my ($n) = @_;
     my ( $d, $u );
-    if ( $n >= 1073741824 ) {
-        ( $d, $u ) = ( 1073741824, 'G' );
+    if ( $n >= 1_073_741_824 ) {
+        ( $d, $u ) = ( 1_073_741_824, 'G' );
     }
-    elsif ( $n >= 1048576 ) {
-        ( $d, $u ) = ( 1048576, 'M' );
+    elsif ( $n >= 1_048_576 ) {
+        ( $d, $u ) = ( 1_048_576, 'M' );
     }
     elsif ( $n >= 1024 ) {
         ( $d, $u ) = ( 1024, 'K' );
@@ -422,8 +425,8 @@ sub get_traffic {
     my $now = time();
     my $out = run_capture( [ $CMD{netstat}, '-nib', '-I', $traffic_iface ] );
     return unless defined $out;
-    my @lines = split( "\n", $out );
-    return unless @lines >= 2;
+    my @lines = split( /\n/, $out );
+    return if @lines < 2;
     my @f = split( ' ', $lines[1] );
     return unless @f == 6 && $f[4] =~ /^\d+$/ && $f[5] =~ /^\d+$/;
     my ( $rx, $tx ) = ( $f[4], $f[5] );
@@ -453,7 +456,10 @@ sub get_traffic {
 # stat(2) would additionally require the rpath promise).
 sub service_running {
     my ($svc) = @_;
-    my $pid = open( my $fh, '-|' );
+
+    # The handle must stay open while the child is configured and
+    # its output is drained; the line-count heuristic flags it.
+    my $pid = open( my $fh, '-|' );    ## no critic (RequireBriefOpen)
     return 0 unless defined $pid;
     if ( $pid == 0 ) {
         open STDIN,  '<&', $null_fh or exit 1;
@@ -462,8 +468,10 @@ sub service_running {
         exec $CMD{rcctl}, 'check', $svc;
         exit 1;
     }
-    1 while <$fh>;
-    close $fh;
+
+    # Drain the pipe; only rcctl's exit status matters.
+    while (<$fh>) { }
+    close $fh or return 0;
     return $? == 0;
 }
 
@@ -499,7 +507,8 @@ while (1) {
 
     push @fields, '🧅' if $cycle % 15 == 1 && service_running('tor');
 
-    print join( '  ', @fields ), "\n";
+    print join( '  ', @fields ), "\n"
+      or exit 1;
 
     last if $max_iterations && $cycle >= $max_iterations;
     sleep $interval;

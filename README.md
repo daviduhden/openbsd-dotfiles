@@ -134,6 +134,13 @@ $ sh -n xenodm/Xsetup_0.sh
 $ doas -C /etc/doas.conf
 ```
 
+The Perl helper regression tests run in a temporary directory with a
+fake `scrot` and need no root privileges:
+
+```sh
+$ ksh tests/perl_helpers_test.ksh
+```
+
 Spectrwm and Dunst should also be started from a terminal after upgrades so that either program can report configuration keys removed by a newer package version.
 
 ## References

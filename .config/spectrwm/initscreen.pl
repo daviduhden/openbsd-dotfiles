@@ -57,13 +57,15 @@ if ( $^O eq 'openbsd' ) {
 my $out;
 open my $fh, '-|', $xrandr, '--query' or exit 0;
 {
-    local $/;
+    local $/ = undef;
     $out = <$fh> // '';
 }
-close $fh;
+
+# A failed xrandr invocation is non-fatal: there is nothing to configure.
+close $fh or exit 0;
 
 my @connected;
-for my $line ( split( "\n", $out ) ) {
+for my $line ( split( /\n/, $out ) ) {
     push @connected, $1 if $line =~ /^(\S+) connected/;
 }
 exit 0 unless @connected;

@@ -30,7 +30,7 @@
 
 use strict;
 use warnings;
-use POSIX          qw(strftime);
+use POSIX          qw(strftime WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG);
 use File::Basename qw(basename);
 use File::Path     qw(make_path);
 use if $^O eq 'openbsd', 'OpenBSD::Unveil';
@@ -49,7 +49,7 @@ my $dir  = "$ENV{HOME}/Pictures/Screenshots";
 my $mode = @ARGV ? $ARGV[0] : 'full';
 
 if ( $mode ne 'full' && $mode ne 'window' ) {
-    print STDERR "Usage: ", basename($0), " [full|window]\n";
+    print STDERR 'Usage: ', basename($0), " [full|window]\n";
     exit 1;
 }
 
@@ -95,7 +95,7 @@ if ( $^O eq 'openbsd' ) {
     if ($have_local_lib) {
         unveil( '/usr/local/lib', 'r' ) or die "unveil /usr/local/lib: $!";
     }
-    unveil()                 or die "unable to lock unveil: $!";
+    unveil() or die "unable to lock unveil: $!";
 }
 
 my @args = ( '-m', $outfile );
@@ -106,13 +106,25 @@ if ( $mode eq 'window' ) {
     @args = ( '-s', $outfile );
 }
 
+# Report the child's real wait status: a scrot killed by a signal
+# must not look like a successful screenshot.
 my $rc = system( $scrot, @args );
-if ( $rc != 0 ) {
-    exit( $rc == -1 ? 1 : $rc >> 8 );
+if ( $rc == -1 ) {
+    exit 1;
+}
+if ( WIFSIGNALED($rc) ) {
+    exit 128 + WTERMSIG($rc);
+}
+if ( !WIFEXITED($rc) ) {
+    exit 1;
+}
+if ( WEXITSTATUS($rc) != 0 ) {
+    exit WEXITSTATUS($rc);
 }
 
 if ($have_notify) {
     system( $notify, '📷 Screenshot saved', $outfile );
 }
 
-print "📷 Saved: $outfile\n";
+print "📷 Saved: $outfile\n"
+  or exit 1;
