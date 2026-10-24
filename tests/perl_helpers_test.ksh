@@ -4,7 +4,7 @@
 # OpenBSD-specific hardware or services:
 #
 #   * sort-packages.pl: sorting, duplicate removal, comment handling,
-#     mode preservation, cleanup and failure reporting.
+#     mode and ownership preservation, cleanup and failure reporting.
 #   * screenshot.pl: exit-status propagation when scrot fails or is
 #     killed (the sandbox is disabled in the test copy so that the fake
 #     scrot can run on any platform).
@@ -56,6 +56,8 @@ test_sort_packages() {
 		print 'alpha'
 	} >"$file"
 	chmod 640 "$file"
+	uid_before=$(perl -e 'print +(stat($ARGV[0]))[4]' "$file")
+	gid_before=$(perl -e 'print +(stat($ARGV[0]))[5]' "$file")
 
 	set +e
 	perl "$SRC/sort-packages.pl" "$file" \
@@ -86,6 +88,11 @@ test_sort_packages() {
 
 	mode=$(perl -e 'printf "%o", (stat($ARGV[0]))[2] & oct("7777")' "$file")
 	check_status 640 "$mode" "original mode is preserved"
+
+	uid=$(perl -e 'print +(stat($ARGV[0]))[4]' "$file")
+	gid=$(perl -e 'print +(stat($ARGV[0]))[5]' "$file")
+	check_status "$uid_before" "$uid" "original owner is preserved"
+	check_status "$gid_before" "$gid" "original group is preserved"
 
 	if [ -z "$(find "$TESTDIR" -name '.packages-*' -print)" ]; then
 		ok "no temporary file is left behind"

@@ -4,11 +4,10 @@
 #
 # This script installs the OpenBSD dotfiles for a specified user.
 # It requires root (superuser) privileges to run.
-# It installs necessary packages,
-# configures doas, asks for the X keyboard layout (es or us) and
-# sets the matching locale (es_ES.UTF-8 or en_US.UTF-8),
-# and sets up configuration files for spectrwm
-# and dunst.
+# It asks for the target user and the X keyboard layout (es or us),
+# optionally configures doas, installs the packages, and sets the
+# matching locale (es_ES.UTF-8 or en_US.UTF-8). It also sets up the
+# spectrwm and dunst configuration files.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
@@ -25,6 +24,22 @@ export PATH
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 PKG_FILE="$SCRIPT_DIR/packages.txt"
 set -A PKGS --
+
+DOAS_TMP=
+LAYOUT_TMP=
+
+cleanup() {
+	if [ -n "$DOAS_TMP" ]; then
+		rm -f "$DOAS_TMP"
+	fi
+	if [ -n "$LAYOUT_TMP" ]; then
+		rm -f "$LAYOUT_TMP"
+	fi
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 log() { print "[INFO] $*"; }
 warn() { print "[WARN] $*" >&2; }
@@ -86,16 +101,32 @@ ask_target_user() {
 		error "A non-root target username is required."
 		exit 1
 	}
-	if [ "$TARGET_USER" = root ] || ! id "$TARGET_USER" >/dev/null 2>&1; then
-		error "Target user '$TARGET_USER' does not exist or is root."
+	case "$TARGET_USER" in
+	-*)
+		error "Target username must not start with '-'."
+		exit 1
+		;;
+	esac
+
+	if ! TARGET_UID=$(id -u "$TARGET_USER" 2>/dev/null); then
+		error "Target user '$TARGET_USER' does not exist."
+		exit 1
+	fi
+	if [ "$TARGET_UID" -eq 0 ]; then
+		error "Target user '$TARGET_USER' has UID 0; choose a non-root account."
 		exit 1
 	fi
 
-	TARGET_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
-	TARGET_GROUP="$(id -gn "$TARGET_USER")"
+	# OpenBSD base does not provide getent(1); read the local passwd
+	# database directly. This also rejects numeric IDs that do not
+	# name a real account.
+	TARGET_HOME=$(awk -F: -v user="$TARGET_USER" \
+		'$1 == user { print $6; exit }' /etc/passwd)
+	TARGET_GROUP=$(id -gn "$TARGET_USER")
 
-	if [ -z "$TARGET_HOME" ] || [ ! -d "$TARGET_HOME" ]; then
-		error "Could not determine HOME for user '$TARGET_USER'"
+	if [ -z "$TARGET_HOME" ] || [ ! -d "$TARGET_HOME" ] ||
+		[ "$TARGET_HOME" = / ]; then
+		error "Could not determine a usable HOME for user '$TARGET_USER'"
 		exit 1
 	fi
 
@@ -106,7 +137,7 @@ ask_target_user() {
 
 ask_keyboard_layout() {
 	# A valid KEYBOARD_LAYOUT environment variable (es or us)
-	# preselects the layout for non-interactive use.
+	# skips this prompt; the user and doas prompts still run.
 	if [ -n "${KEYBOARD_LAYOUT:-}" ]; then
 		case "$KEYBOARD_LAYOUT" in
 		es | us)
@@ -158,19 +189,19 @@ configure_doas() {
 		}
 		END { exit !found }
 	' /etc/doas.conf 2>/dev/null; then
-		doas_tmp=$(mktemp /tmp/doas.conf.XXXXXX)
+		DOAS_TMP=$(mktemp /tmp/doas.conf.XXXXXX)
 		if [ -f /etc/doas.conf ]; then
-			cp /etc/doas.conf "$doas_tmp"
+			cp /etc/doas.conf "$DOAS_TMP"
 		fi
-		print >>"$doas_tmp"
-		print -r -- "$DOAS_RULE" >>"$doas_tmp"
-		if ! doas -C "$doas_tmp"; then
-			rm -f "$doas_tmp"
+		print >>"$DOAS_TMP"
+		print -r -- "$DOAS_RULE" >>"$DOAS_TMP"
+		if ! doas -C "$DOAS_TMP"; then
 			error "The generated doas configuration is invalid."
 			exit 1
 		fi
-		install -b -o root -g wheel -m 600 "$doas_tmp" /etc/doas.conf
-		rm -f "$doas_tmp"
+		install -b -o root -g wheel -m 600 "$DOAS_TMP" /etc/doas.conf
+		rm -f "$DOAS_TMP"
+		DOAS_TMP=
 		log "Added rule to /etc/doas.conf"
 	else
 		log "Rule already present in /etc/doas.conf"
@@ -181,21 +212,38 @@ install_packages() {
 	load_packages
 	log "Installing packages from $PKG_FILE ..."
 	for pkg in "${PKGS[@]}"; do
-		pkg_add "$pkg"
+		pkg_add -- "$pkg"
 	done
+}
+
+# Create one directory component at a time so that every missing
+# parent is owned by the target user, not root. Existing directories
+# are left untouched (mode and ownership preserved). Refuse symlinked
+# managed directories to avoid writing through a link as root.
+ensure_dir() {
+	typeset dir=$1 mode=$2 parent
+	if [ "$dir" = "$HOME" ]; then
+		return 0
+	fi
+	if [ -L "$dir" ]; then
+		error "Refusing to use symlinked directory: $dir"
+		exit 1
+	fi
+	if [ -d "$dir" ]; then
+		return 0
+	fi
+	parent=$(dirname "$dir")
+	if [ "$parent" != "$dir" ]; then
+		ensure_dir "$parent" 755
+	fi
+	install -d -o "$TARGET_USER" -g "$TARGET_GROUP" -m "$mode" "$dir"
 }
 
 create_directories() {
 	log "Creating configuration directories ..."
-	# Create ~/.config explicitly: install(1) -d creates missing
-	# parent directories as root and only chowns the deepest
-	# component, which would leave ~/.config owned by root and
-	# therefore unwritable for the target user.
-	install -d -o "$TARGET_USER" -g "$TARGET_GROUP" -m 755 \
-		"$HOME/.config"
-	install -d -o "$TARGET_USER" -g "$TARGET_GROUP" -m 700 \
-		"$HOME/.config/spectrwm" \
-		"$HOME/.config/dunst"
+	ensure_dir "$HOME/.config" 755
+	ensure_dir "$HOME/.config/spectrwm" 700
+	ensure_dir "$HOME/.config/dunst" 700
 }
 
 install_spectrwm() {
@@ -226,8 +274,7 @@ install_root_profile() {
 install_user_file() {
 	# $1 source, $2 destination, $3 mode. Creates the destination
 	# directory (owned by the target user) when needed.
-	install -d -o "$TARGET_USER" -g "$TARGET_GROUP" -m 755 \
-		"$(dirname "$2")"
+	ensure_dir "$(dirname "$2")" 755
 	install -b -o "$TARGET_USER" -g "$TARGET_GROUP" -m "$3" "$1" "$2"
 }
 
@@ -319,7 +366,7 @@ layout_locale() {
 # KEYBOARD_LAYOUT= assignment (when present) and the LANG= and
 # LC_CTYPE= exports. Owner and mode are preserved. Idempotent.
 apply_layout_file() {
-	layout_tmp=$(mktemp /tmp/dotfiles.XXXXXX)
+	LAYOUT_TMP=$(mktemp "$(dirname "$1")/.dotfiles.XXXXXX")
 	awk -v layout="$KEYBOARD_LAYOUT" -v locale="$LAYOUT_LOCALE" '
 		/^KEYBOARD_LAYOUT=/ {
 			print "KEYBOARD_LAYOUT=" layout
@@ -334,10 +381,11 @@ apply_layout_file() {
 			next
 		}
 		{ print }
-	' "$1" >"$layout_tmp"
-	chown "$2:$3" "$layout_tmp"
-	chmod "$4" "$layout_tmp"
-	mv "$layout_tmp" "$1"
+	' "$1" >"$LAYOUT_TMP"
+	chown "$2:$3" "$LAYOUT_TMP"
+	chmod "$4" "$LAYOUT_TMP"
+	mv "$LAYOUT_TMP" "$1"
+	LAYOUT_TMP=
 }
 
 apply_keyboard_layout() {
@@ -349,12 +397,24 @@ apply_keyboard_layout() {
 
 	apply_layout_file "$HOME/.xsession" \
 		"$TARGET_USER" "$TARGET_GROUP" 755
-	if ! grep -q "^KEYBOARD_LAYOUT=$KEYBOARD_LAYOUT\$" "$HOME/.xsession"; then
-		warn "No KEYBOARD_LAYOUT= line found in ~/.xsession; layout not applied."
+	if ! grep -Fqx "KEYBOARD_LAYOUT=$KEYBOARD_LAYOUT" "$HOME/.xsession"; then
+		error "No matching KEYBOARD_LAYOUT= line in ~/.xsession."
+		exit 1
 	fi
 	apply_layout_file "$HOME/.profile" \
 		"$TARGET_USER" "$TARGET_GROUP" 644
 	apply_layout_file "/root/.profile" root wheel 644
+
+	for layout_file in "$HOME/.xsession" "$HOME/.profile" "/root/.profile"; do
+		if ! grep -Fqx "export LANG=$LAYOUT_LOCALE" "$layout_file"; then
+			error "LANG was not applied to $layout_file."
+			exit 1
+		fi
+		if ! grep -Fqx "export LC_CTYPE=$LAYOUT_LOCALE" "$layout_file"; then
+			error "LC_CTYPE was not applied to $layout_file."
+			exit 1
+		fi
+	done
 
 	log "Keyboard layout '$KEYBOARD_LAYOUT' and locale '$LAYOUT_LOCALE' applied."
 }
@@ -367,8 +427,8 @@ set_shell() {
 main() {
 	require_root
 	ask_target_user
-	configure_doas
 	ask_keyboard_layout
+	configure_doas
 	install_packages
 	create_directories
 	install_spectrwm

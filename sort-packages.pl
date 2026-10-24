@@ -50,10 +50,15 @@ for my $line (@lines) {
 my %seen;
 my @sorted_entries = sort { $a cmp $b } grep { !$seen{$_}++ } @entries;
 
-# Write atomically in the same directory and preserve the original mode.
+# Write atomically in the same directory and preserve the original
+# mode and ownership, including when run as root on a user-owned file.
 my $file_mode = ( stat $pkg_file )[2];
+my $file_uid  = ( stat $pkg_file )[4];
+my $file_gid  = ( stat $pkg_file )[5];
 defined $file_mode
   or die "Cannot stat $pkg_file: $!\n";
+defined $file_uid && defined $file_gid
+  or die "Cannot stat owner of $pkg_file: $!\n";
 my $mode = $file_mode & oct('7777');
 my ( $out, $temporary ) =
   tempfile( '.packages-XXXXXX', DIR => dirname($pkg_file), UNLINK => 1 );
@@ -71,6 +76,8 @@ for my $entry (@sorted_entries) {
 }
 
 close $out or die "Cannot close $temporary: $!\n";
+chown $file_uid, $file_gid, $temporary
+  or die "Cannot set ownership on $temporary: $!\n";
 chmod $mode, $temporary
   or die "Cannot set permissions on $temporary: $!\n";
 rename $temporary, $pkg_file

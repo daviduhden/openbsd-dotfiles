@@ -1,5 +1,7 @@
 # spectrwm Usage
 
+See [LICENSE](LICENSE) for copyright and license details.
+
 This document describes how to operate and customize the spectrwm
 configuration shipped in this dotfiles repository. It is based strictly on
 [`.config/spectrwm/spectrwm.conf`](.config/spectrwm/spectrwm.conf), the
@@ -83,10 +85,12 @@ bindings were replaced (see [Troubleshooting](#troubleshooting)). The
 `us` layout has no dead keys, so it is applied without a variant.
 
 On the `us` layout the bindings are still active, but several keysyms in
-the table above (`exclamdown`, `apostrophe` as used here, `masculine`,
-`ccedilla`) do not match any physical key, so those particular bindings
-simply do not fire. The letter-based bindings (`Mod+j`, `Mod+k`, `Mod+g`,
-`Mod+n` and so on) behave identically on both layouts.
+the table above (`exclamdown`, `masculine`, `ccedilla`) do not match any
+physical key, so those particular bindings do not fire. `apostrophe` is
+the US `'` key, so `Mod+apostrophe` still fires; `Mod+Shift+apostrophe`
+requires `quotedbl`, which this configuration does not bind. The
+letter-based bindings (`Mod+j`, `Mod+k`, `Mod+g`, `Mod+n` and so on)
+behave identically on both layouts.
 
 ## Essential Shortcuts
 
@@ -272,12 +276,15 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     re-expanded on every bar redraw, so the clock follows the refresh rate
     of the status script.
 * **Status script:** `bar_action = ~/.config/spectrwm/statusbar.pl`.
-  A single persistent Perl process (base `/usr/bin/perl`): spectrwm
-  starts it once and reads one status line from its standard output per
-  2-second cycle (the script loops internally; spectrwm 3.7 has no
-  `bar_delay` option). All text processing happens inside Perl; the only
-  external processes are the base commands that provide the data. The
-  script prints, in order:
+  A single persistent Perl process (base `/usr/bin/perl`): the design
+  assumes spectrwm starts it once and reads one status line from its
+  standard output per 2-second cycle (the script loops internally and
+  controls the refresh rate). Verify on the target that only one
+  `statusbar.pl` process exists with `pgrep -fl 'statusbar\.pl'`; if the
+  installed spectrwm re-executes `bar_action` per update, the loop must be
+  redesigned. All text processing happens inside Perl; the only external
+  processes are the base commands that provide the data. The script prints,
+  in order:
 
   * `🖥 nn%` - CPU usage averaged over the last interval, computed from
     `kern.cp_time` deltas (all CPU states are summed and the last one,
@@ -313,8 +320,9 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     `ppp`, `gif`, `gre`, `pair` and friends), a physical interface is
     shown instead.
   * `📥 2K 📤 1K` - throughput over the last interval, from the
-    `Ibytes`/`Obytes` columns of `netstat -nib -I` (with `-b`, those are
-    the last two columns of the link row). Units scale automatically
+    `Ibytes`/`Obytes` columns of `netstat -nib -I`, located by header
+    name rather than by a fixed field count, preferring the `<Link>` row.
+    Units scale automatically
     (`B`, `K`, `M`, `G`); one decimal is shown only for values below 10,
     so exact powers of two print without a `.0`. Counter resets and
     interface changes restart the baseline instead of showing a bogus
@@ -357,8 +365,8 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
   * `statusbar.pl` - `unveil`: the data-gathering executables (`x`), the
     apm socket `/var/run/apmdev` (`w`) and device `/dev/apm` (`r`), the
     sndiod(8) control sockets `/tmp/sndio` and `/tmp/sndio-<euid>` (`w`;
-    required by `connect(2)`) and the session-cookie directory `~/.sndio`
-    (`rwc`; created like libsndio would if missing, so that the rule
+    required by `connect(2)`) and the private session-cookie directory
+    `~/.sndio` (`rwc`; created with mode 0700 if missing, so that the rule
     covers the cookie inside it), the rcctl(8) Tor-check chain
     (`/usr/sbin/rcctl` `rx`, `/bin/ksh` `x`, `/etc/rc.d/tor` `rx`,
     `/etc/rc.d/rc.subr`/`/etc/rc.conf`/`local` `r`,
@@ -372,10 +380,11 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     library directories `r`.
 
   The launchers stay unpledged because they execute other programs. Their
-  locked unveil rules constrain parent pathname operations; execve clears
-  the view in children, which install their own sandbox. There is no parent
-  syscall ceiling. A failing unveil call is fatal. Diagnose pathname denials
-  with the U flag in lastcomm(1). X11 assumes a local unix socket.
+  locked unveil rules constrain parent pathname operations; the locked view
+  is inherited across execve(2), so children receive the unveiled library
+  paths and may install their own pledge policy. There is no parent syscall
+  ceiling. A failing unveil call is fatal. Diagnose pathname denials with
+  the U flag in lastcomm(1). X11 assumes a local unix socket.
 * **Colors** (semantics only; values are Dracula palette entries):
   * `bar_color` / `bar_color_unfocus` - bar background for the focused and
     unfocused regions; `bar_color_free` - bar background while a
@@ -390,9 +399,9 @@ region (`bar_at_bottom = 1`), in the Dracula-like color scheme shared with
     (2-pixel borders, `border_width = 2`) for focused, unfocused and urgent
     windows.
 * `bar_padding_horizontal` and `bar_padding_vertical` (both `0`) are
-  supported since spectrwm 3.7; the configuration targets that version (the
-  current OpenBSD package). On older spectrwm releases these lines are
-  reported as unknown options and ignored, which is harmless.
+  understood by spectrwm 3.7 and later; check `spectrwm -v` on the target.
+  On older releases these lines are reported as unknown options and
+  ignored, which is harmless.
 * The bar is toggled with `Mod+b`; `Mod+Shift+b` toggles it only for the
   current workspace.
 
@@ -438,9 +447,9 @@ What happens when the session starts, in order:
    * sets a predictable `PATH` including the base system, Xenocara and
      `/usr/local` directories (xenodm may hand the session a minimal
      environment);
-   * exports the locale (`LANG`/`LC_CTYPE` set to `es_ES.UTF-8`,
-     `LC_COLLATE=C`; `LC_ALL` is left unset) and the XDG base
-     directories;
+   * exports the locale selected by the installer (`LANG`/`LC_CTYPE` set
+     to `es_ES.UTF-8` or `en_US.UTF-8`, `LC_COLLATE=C`; any inherited
+     `LC_ALL` is cleared) and the XDG base directories;
    * applies the keyboard layout stored in the `KEYBOARD_LAYOUT` line
      (`setxkbmap es nodeadkeys` or `setxkbmap us`); `install.ksh` writes
      that line (`es` or `us`, default `es`) when installing and rewrites
@@ -461,8 +470,9 @@ What happens when the session starts, in order:
    That script uses `xrandr` to enable the internal panel (any of
    `eDP`, `eDP-1`, `eDP-0`, `LVDS`, `LVDS-1`, `LVDS-0`, otherwise the first
    connected output) and places the first other connected output to its
-   right. `autorun` entries only run at start-of-day: they are not re-run
-   after `Mod+q` (restart), by design.
+   right. The configuration assumes `autorun` entries only run at
+   start-of-day and are not re-run after `Mod+q` (restart); verify that
+   behavior on the target before relying on it.
 
 The login shell profile (installed from [`.profile.ksh`](.profile.ksh)) is
 not part of the spectrwm startup chain; it sets `PATH`, the prompt, the
@@ -478,14 +488,15 @@ These are used by the configuration and need no package installation:
 
 * `spectrwm` is itself a package, but the following helpers are base:
   `xterm`, `xlock`, `xrandr`, `xrdb`, `setxkbmap`, `xsetroot`,
-  `/bin/sh` and `/bin/ksh`, and the standard tools used by the scripts
-  (`awk`, `grep`, `head`, `printf`, `date`, `mkdir`, `sleep`).
+  `/bin/sh` and `/bin/ksh`, and the base utilities used by the installer
+  and scripts (`awk`, `grep`, `id`, `dirname`, `mktemp`, `install`,
+  `chmod`, `chown`, `mv`, `chsh`, `pkg_add`).
   The spectrwm helper scripts are Perl (`/usr/bin/perl`, base system)
   and parse all command output themselves; on OpenBSD they sandbox
   themselves with the `OpenBSD::Unveil` module
   shipped with base Perl. The status-bar script additionally uses only
-  base commands: `sysctl`, `vmstat`, `apm`, `ifconfig`, `netstat` and
-  `rcctl`.
+  base commands: `sysctl`, `vmstat`, `apm`, `ifconfig`, `netstat`,
+  `rcctl` and `sndioctl`.
 
 ### Packages (ports)
 
@@ -569,8 +580,8 @@ noted:
   notification colors live in [`.Xresources`](.Xresources) and
   [`.config/dunst/dunstrc`](.config/dunst/dunstrc) respectively.
 * **Borders:** `border_width` (window borders) and `bar_border_width`.
-  There is no gap/padding option configured; spectrwm 3.7 supports
-  `region_padding` if desired.
+  There is no gap/padding option configured; newer spectrwm releases
+  support `region_padding` if desired (check `spectrwm -v`).
 * **Workspaces:** `workspace_limit`, and the `bind[ws_n]` / `bind[mvws_n]`
   lines. Workspace names or per-workspace layouts would be added with
   `name = ws[n]:...` and `layout = ws[n]:...` lines.
@@ -601,7 +612,7 @@ Issues that can realistically arise from this specific configuration:
   only reports failures to its standard error (visible in
   `~/.xsession-errors` under xenodm). If `Mod+c`, `Mod+Shift+f` or
   `Mod+Shift+c` do nothing, check the package is installed:
-  `command -v chrome vifm xclip scrot dmenu_run`.
+  `for c in chrome vifm xclip scrot dmenu_run; do command -v "$c"; done`.
 * **Screenshots do not work.** `screenshot.pl` requires `scrot` and must be
   executable (`chmod +x ~/.config/spectrwm/screenshot.pl`; the installer
   sets mode 755). Output goes to `~/Pictures/Screenshots/`. The
@@ -612,14 +623,16 @@ Issues that can realistically arise from this specific configuration:
   this repository; this setup's equivalent is
   [`initscreen.pl`](.config/spectrwm/initscreen.pl), run via `autorun`.
   Rebinding or unbinding the default is safe.
-* **External monitor not enabled after restart.** `autorun` entries only run
-  at start-of-day, so `Mod+q` does not re-run `initscreen.pl`. Run
+* **External monitor not enabled after restart.** The configuration assumes
+  `autorun` entries only run at start-of-day, so `Mod+q` does not re-run
+  `initscreen.pl`. Verify the restart behavior on the target, then run
   `~/.config/spectrwm/initscreen.pl` manually or log out and back in.
 * **"unknown option" warnings when starting spectrwm from a terminal.**
   `bar_padding_horizontal` / `bar_padding_vertical` are only understood by
-  spectrwm 3.7 or newer; older OpenBSD packages log them as unknown options
-  and continue. Starting spectrwm from a terminal after package upgrades is
-  the easiest way to see such configuration notices.
+  spectrwm 3.7 or newer; verify with `spectrwm -v`. Older OpenBSD packages
+  log them as unknown options and continue. Starting spectrwm from a
+  terminal after package upgrades is the easiest way to see such
+  configuration notices.
 * **Application rules would not match.** No rules exist today; when adding
   `quirk[...]` entries, identify applications with
   `xprop WM_CLASS` (the class string is what `quirk` matches), not the
@@ -707,8 +720,10 @@ the `MOD` alias, which is `Mod4` (Super/Windows key).
 
 The keys map to the Spanish physical layout as listed in
 [Key Conventions](#key-conventions). On the `us` layout the grave and
-`plus` bindings still match physical keys; `exclamdown` and `apostrophe`
-(as used here) do not. The two `grave` entries use the `grave` keysym (not
+`plus` bindings still match physical keys; `exclamdown`, `masculine` and
+`ccedilla` do not. `apostrophe` is the US `'` key, so `Mod+apostrophe`
+fires, but `Mod+Shift+apostrophe` does not because Shift produces
+`quotedbl`. The two `grave` entries use the `grave` keysym (not
 `dead_grave`) because the session applies `es nodeadkeys`; they replace the
 default `focus_free` and `free_toggle` bindings, which this configuration
 re-assigns to the `masculine` key.

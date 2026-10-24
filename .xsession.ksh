@@ -20,9 +20,10 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/X11R6/bin:/usr/local/sbin:/usr/local/bin
 export PATH
 
-# Locale. LC_ALL is deliberately not set: it would override the
-# per-category values below (notably LC_COLLATE=C) and diverge
-# from the login profile.
+# Locale. LC_ALL would override the per-category values below
+# (notably LC_COLLATE=C), so clear any inherited value before
+# exporting the login-profile defaults.
+unset LC_ALL
 export LANG=es_ES.UTF-8
 export LC_CTYPE=es_ES.UTF-8
 export LC_COLLATE=C
@@ -43,12 +44,20 @@ KEYBOARD_LAYOUT=es
 
 # nodeadkeys makes the grave key report 'grave' instead of
 # 'dead_grave', which the spectrwm move bindings rely on. The US
-# layout has no dead keys, so it is set without a variant.
-if [ "$KEYBOARD_LAYOUT" = es ]; then
+# layout has no dead keys, so it is set without a variant. An
+# unknown value is a configuration error, not a US fallback.
+case "${KEYBOARD_LAYOUT:-}" in
+es)
 	setxkbmap es nodeadkeys
-else
+	;;
+us)
 	setxkbmap us
-fi
+	;;
+*)
+	print -u2 "Invalid KEYBOARD_LAYOUT: ${KEYBOARD_LAYOUT:-<empty>}"
+	exit 1
+	;;
+esac
 
 # -------------------------------------------------
 # X resources

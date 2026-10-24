@@ -12,8 +12,8 @@
 #             libraries (X11 lives under /usr/X11R6/lib), the
 #             Xauthority file and the X server socket.
 #   The launcher stays unpledged because it executes external programs.
-#   The locked view restricts this parent's pathname operations; execve
-#   clears it in the children, which can apply their own security policy.
+#   The locked view is inherited across execve(2); children need the
+#   unveiled library paths and may apply their own pledge policy.
 #
 # The X server is assumed to listen on the local unix socket
 # (/tmp/.X11-unix); a remote DISPLAY (TCP) will not work under

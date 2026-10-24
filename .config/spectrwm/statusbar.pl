@@ -33,8 +33,8 @@
 #             sockets and session cookie, the dynamic linker and
 #             the shared libraries; locked before the loop.
 #   The launcher stays unpledged because it executes external programs.
-#   The locked view restricts this parent's pathname operations; execve
-#   clears it in the children, which can apply their own security policy.
+#   The locked view is inherited across execve(2); children need the
+#   unveiled library paths and may apply their own pledge policy.
 #
 # Optional arguments, useful for testing and manual runs:
 #   statusbar.pl [iterations]      limit the number of cycles
@@ -95,14 +95,14 @@ open my $null_fh, '<', '/dev/null'    ## no critic (RequireBriefOpen)
   or die "cannot open /dev/null: $!";
 
 # The sndio session cookie lives in ~/.sndio. The directory is
-# created here, before the first unveil(2) restricts the filesystem
-# view, exactly as libsndio(3) would on first use: unveiling it
-# afterwards as a directory makes the rule cover the cookie inside
-# it. Left undef when there is no HOME to build the path from.
+# created private to the user (0700) here, before the first unveil(2)
+# restricts the filesystem view: unveiling it afterwards as a
+# directory makes the rule cover the cookie inside it. Left undef
+# when there is no HOME to build the path from.
 my $sndio_dir;
 if ( $^O eq 'openbsd' && defined $ENV{HOME} && length $ENV{HOME} ) {
     $sndio_dir = "$ENV{HOME}/.sndio";
-    mkdir $sndio_dir, 0755 unless -d $sndio_dir;
+    mkdir $sndio_dir, 0700 unless -d $sndio_dir;
 }
 
 if ( $^O eq 'openbsd' ) {
@@ -392,10 +392,12 @@ sub get_net {
 }
 
 # --- Network throughput, from interface byte counters ------
-# netstat -nib prints the link row with "Ibytes Obytes" as the
-# last two columns. The deltas are computed against the previous
-# sample held in memory; counter resets and interface changes
-# restart the baseline.
+# netstat -nib prints a header row with named columns and one or
+# more data rows per interface. Locate Ibytes/Obytes by header
+# name instead of assuming a fixed column count, then prefer the
+# <Link> row. The deltas are computed against the previous sample
+# held in memory; counter resets and interface changes restart the
+# baseline.
 sub rate {
     my ($n) = @_;
     my ( $d, $u );
@@ -427,9 +429,43 @@ sub get_traffic {
     return unless defined $out;
     my @lines = split( /\n/, $out );
     return if @lines < 2;
-    my @f = split( ' ', $lines[1] );
-    return unless @f == 6 && $f[4] =~ /^\d+$/ && $f[5] =~ /^\d+$/;
-    my ( $rx, $tx ) = ( $f[4], $f[5] );
+
+    my ( $header, $start );
+    for my $i ( 0 .. $#lines ) {
+        next
+          unless $lines[$i] =~ /\bIbytes\b/
+          && $lines[$i] =~ /\bObytes\b/;
+        $header = $lines[$i];
+        $start  = $i + 1;
+        last;
+    }
+    return unless defined $header && defined $start;
+
+    my @hdr = split( ' ', $header );
+    my ( $rx_col, $tx_col );
+    for my $i ( 0 .. $#hdr ) {
+        $rx_col = $i if $hdr[$i] eq 'Ibytes';
+        $tx_col = $i if $hdr[$i] eq 'Obytes';
+    }
+    return unless defined $rx_col && defined $tx_col;
+
+    my $row;
+    for my $i ( $start .. $#lines ) {
+        my @f = split( ' ', $lines[$i] );
+        next if @f <= $rx_col || @f <= $tx_col;
+        if ( !defined $row || ( defined $f[2] && $f[2] eq '<Link>' ) ) {
+            $row = \@f;
+            last if defined $f[2] && $f[2] eq '<Link>';
+        }
+    }
+    return unless defined $row;
+
+    my ( $rx, $tx ) = ( $row->[$rx_col], $row->[$tx_col] );
+    return
+      unless defined $rx
+      && defined $tx
+      && $rx =~ /^\d+$/
+      && $tx =~ /^\d+$/;
     my $field;
 
     if (   defined $traffic_rx
@@ -511,5 +547,8 @@ while (1) {
       or exit 1;
 
     last if $max_iterations && $cycle >= $max_iterations;
-    sleep $interval;
+
+    # select(2) keeps fractional STATUSBAR_INTERVAL values working;
+    # Perl's sleep() truncates them to whole seconds.
+    select undef, undef, undef, $interval;
 }

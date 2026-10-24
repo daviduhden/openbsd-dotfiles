@@ -18,8 +18,8 @@
 #             libraries (including /usr/local/lib for the
 #             scrot dependencies).
 #   The launcher stays unpledged because it executes external programs.
-#   The locked view restricts this parent's pathname operations; execve
-#   clears it in the children, which can apply their own security policy.
+#   The locked view is inherited across execve(2); children need the
+#   unveiled library paths and may apply their own pledge policy.
 #
 # The X server is assumed to listen on the local unix socket
 # (/tmp/.X11-unix); a remote DISPLAY (TCP) will not work under
@@ -101,8 +101,9 @@ if ( $^O eq 'openbsd' ) {
 my @args = ( '-m', $outfile );
 if ( $mode eq 'window' ) {
 
-    # brief pause to allow selection to start cleanly
-    sleep 0.2;
+    # Brief pause to allow selection to start cleanly. Perl's
+    # sleep() truncates fractional seconds, so use select(2).
+    select undef, undef, undef, 0.2;
     @args = ( '-s', $outfile );
 }
 
