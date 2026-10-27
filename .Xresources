@@ -4,6 +4,9 @@
 ! -------------------------------------------------
 ! Dracula-like dark theme
 ! -------------------------------------------------
+! These color0-color15 resources define the terminal's ANSI palette.
+! Terminal-based application themes use those names rather than embedding
+! RGB values, so changing this palette affects several applications at once.
 *.foreground:   #f8f8f2
 *.background:   #282a36
 *.cursorColor:  #bd93f9
@@ -29,6 +32,8 @@
 ! -------------------------------------------------
 ! xterm settings
 ! -------------------------------------------------
+! Use Xft rendering and a fixed-size Noto Sans Mono face; the emoji fallback
+! is configured separately by spectrwm for its status bar.
 xterm*utf8: true
 xterm*locale: true
 xterm*renderFont: true

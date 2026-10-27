@@ -5,6 +5,10 @@
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
 
+# This is a login profile, not an interactive-shell rc file. OpenBSD
+# ksh reads it for login sessions; keep interactive-only terminal setup
+# behind the $- check below so non-interactive login commands stay usable.
+
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/X11R6/bin:/usr/local/sbin:/usr/local/bin
 export PATH
 

@@ -67,6 +67,8 @@ for a normal root login unless root is switched to ksh or starts ksh
 explicitly.
 
 For the full operator guide, see [USAGE.md](USAGE.md).
+For the source-to-runtime map and startup relationships, see
+[ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Session behaviour
 

@@ -6,6 +6,8 @@
 
 [global]
     ### Display
+    # Follow the pointer's monitor; width and height bound the notification
+    # area, while origin and offset anchor it to the upper-right corner.
     monitor = 0
     follow = mouse
     width = 300
@@ -30,6 +32,8 @@
     separator_color = frame
 
     ### Text
+    # Full markup permits notification bodies to contain supported markup;
+    # treat notification text as content from the sending application.
     font = Noto Sans Mono 10
     line_height = 0
     markup = full
@@ -40,6 +44,8 @@
     show_age_threshold = 60
 
     ### Icons
+    # Search icon themes recursively and use the standard hicolor fallback
+    # theme for application-provided Freedesktop icon names.
     enable_recursive_icon_lookup = true
     icon_theme = hicolor
     icon_position = left
@@ -47,6 +53,8 @@
     max_icon_size = 64
 
     ### Behavior
+    # Merge repeated notifications and retain a short history for the
+    # configured history shortcut; 120 seconds sets the idle threshold.
     stack_duplicates = true
     hide_duplicate_count = false
     idle_threshold = 120

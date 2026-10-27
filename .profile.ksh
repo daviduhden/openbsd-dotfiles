@@ -5,6 +5,10 @@
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
 
+# This is a login profile, not an interactive-shell rc file. OpenBSD
+# ksh reads it for login sessions; keep interactive-only terminal setup
+# behind the $- check below so non-interactive login commands stay usable.
+
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/X11R6/bin:/usr/local/sbin:/usr/local/bin
 export PATH
 
@@ -53,6 +57,8 @@ export LSCOLORS='ExGxFxDxCxDxDxBxBxExEx'
 export LS_COLORS='di=1;34:ln=1;36:so=1;35:pi=1;33:ex=1;32:bd=1;33:cd=1;33:su=1;31:sg=1;31:tw=1;34:ow=1;34'
 
 # History and editing mode
+# ksh reads and writes this per-user history file; vi mode changes the
+# command-line editor for this shell without changing child processes.
 HISTFILE=$HOME/.ksh_history
 HISTSIZE=20000
 set -o vi
