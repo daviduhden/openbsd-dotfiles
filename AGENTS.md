@@ -5,8 +5,9 @@ a root-only installer, an OpenBSD package manifest, a spectrwm/dunst desktop,
 X session files, and a set of Dracula theme files. It is not a generic
 unattended installer and it is not a Linux dotfiles collection.
 
-Read `README.md` for the user-facing install and session behavior. Read
-`USAGE.md` for the spectrwm operator guide. This file is the short contract
+Read `README.md` for the user-facing install and session behavior,
+`USAGE.md` for the spectrwm operator guide, and `ARCHITECTURE.md` for the
+source-to-runtime map. This file is the short contract
 for agents; the detailed procedures live in `.agents/skills/`.
 
 ## Architecture
@@ -77,9 +78,10 @@ become `.old` backups.
 
 ## Validation
 
-There is no Makefile and no CI configuration. Use these real checks; run each
-file separately because `ksh -n` and `perl -c` only inspect their first file
-operand:
+There is no Makefile or project build workflow. The dedicated PR workflow
+runs the read-only agent-validator contract suite and range gate. Use the real
+project checks below; run each file separately because `ksh -n` and `perl -c`
+only inspect their first file operand:
 
 ```sh
 for f in install.ksh .profile.ksh root/.profile.ksh .xsession.ksh; do
@@ -105,8 +107,10 @@ needs read access, normally as root.
 Starting spectrwm or dunst from a terminal and inspecting
 `~/.xsession-errors` are manual target checks, not repository tests.
 
-When a request says static analysis only, do not run the test suite or any
-script. Read the code, run `git diff --check`, and inspect the diff instead.
+When a request says static analysis only, do not run project scripts or the
+application test suite. The read-only canonical agent validator and its
+isolated contract tests remain required by the repository policy. Read the code,
+run `git diff --check`, and inspect the diff as well.
 
 ## Pre-existing changes
 
@@ -136,3 +140,43 @@ script. Read the code, run `git diff --check`, and inspect the diff instead.
   license handling.
 
 See [LICENSE](LICENSE) for copyright and license details.
+
+## Continuous Agent & Skills Maintenance
+
+Every repository change MUST trigger an Agent & Skills Maintenance Review.
+Agent instructions and skills are living repository artifacts. Before
+completing any repository modification, review all applicable `AGENTS.md`
+files, specialized agents, and `SKILL.md` files. Update the affected knowledge
+artifacts to reflect the implementation, correct outdated instructions, and
+incorporate reusable knowledge. A task is incomplete until knowledge
+synchronization has been performed and validated. Never skip synchronization
+silently or claim that unexecuted checks have passed.
+
+After each change:
+
+1. Identify and review the applicable agents and skills, even when no update
+   initially appears necessary.
+2. Update relevant operational guidance, reusable procedures, references,
+   commands, and paths; remove stale or contradictory instructions.
+3. Do not use whitespace-only, timestamp-only, empty, or otherwise cosmetic
+   edits to satisfy synchronization. For a project change, at least one
+   relevant knowledge artifact must receive a substantive update.
+4. Run `python3 scripts/validate-agent-knowledge.py --scope worktree` and the
+   applicable project checks. For a pull request, CI compares the base and head
+   revisions with `--scope range --base BASE_SHA --head HEAD_SHA`.
+5. Review the validator output and final diff, then report the synchronization
+   result. Warnings require human review; a structural pass does not establish
+   semantic relevance.
+
+Run the validator tests with
+`python3 -m unittest discover -s tests/agent_knowledge_validator -p 'test_*.py'`.
+The validator is read-only and uses Python 3.11+ and the standard library. It
+must not be confused with project-specific validation or installation tools.
+See [Agent Knowledge Validation Contract](docs/agent-knowledge-validation.md)
+for AK001–AK006, JSON schema, exit codes, configuration, and maintenance rules.
+
+All repositories must implement the same Agent Knowledge Validation CLI
+contract, rule identifiers, output conventions and exit codes. Repository-
+specific validations may extend the canonical behavior but must not silently
+redefine it. Any change to the validator contract must be reflected in the
+repository's agent instructions, related skills and tests.

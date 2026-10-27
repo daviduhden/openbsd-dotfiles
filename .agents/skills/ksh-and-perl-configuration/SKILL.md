@@ -49,7 +49,9 @@ contents and secret handling.
   six-field assumption.
 - Perl's `sleep` truncates fractional seconds. Use
   `select undef, undef, undef, $seconds` when a fractional delay is
-  required, as in `statusbar.pl` and `screenshot.pl`.
+  required, as in `statusbar.pl` and `screenshot.pl`. Keep a local
+  `ProhibitSleepViaSelect` Perl::Critic suppression on these calls: they
+  intentionally preserve fractional delays without adding a dependency.
 - Propagate child failures. `screenshot.pl` distinguishes exit status,
   signal death, and a missing command; preserve that behavior.
 - `sort-packages.pl` writes atomically in the source directory, preserves
@@ -124,3 +126,19 @@ ownership preservation, temp cleanup, missing input) and `screenshot.pl`
 - [OpenBSD::Unveil](https://man.openbsd.org/OpenBSD::Unveil.3p),
   [unveil(2)](https://man.openbsd.org/unveil.2), and
   [pledge(2)](https://man.openbsd.org/pledge.2).
+
+## Maintenance & Continuous Learning
+
+Whenever this skill is used to change the repository, review this skill after
+the implementation. Correct procedures that proved wrong, update commands,
+paths, configuration and examples, incorporate reusable findings, and remove
+outdated assumptions. Review the applicable root and nested `AGENTS.md` files,
+specialized agents and related skills; update only the knowledge affected by
+the work. Validate local references and run
+`python3 scripts/validate-agent-knowledge.py --scope worktree` plus the
+applicable project checks. For pull request comparisons, use the documented
+`--scope range --base BASE_REF --head HEAD_REF` command. The canonical validator
+is read-only and is required even when a task restricts execution of project
+scripts; this does not authorize running installers or changing the host.
+Report checks actually performed. A structural pass does not prove semantic
+relevance, and a task is incomplete until synchronization is validated.
