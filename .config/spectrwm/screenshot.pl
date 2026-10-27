@@ -103,7 +103,7 @@ if ( $mode eq 'window' ) {
 
     # Brief pause to allow selection to start cleanly. Perl's
     # sleep() truncates fractional seconds, so use select(2).
-    select undef, undef, undef, 0.2;
+    select undef, undef, undef, 0.2;    ## no critic (ProhibitSleepViaSelect)
     @args = ( '-s', $outfile );
 }
 

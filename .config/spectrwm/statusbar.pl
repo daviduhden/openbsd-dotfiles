@@ -399,6 +399,10 @@ sub get_net {
 # held in memory; counter resets and interface changes restart the
 # baseline.
 sub rate {
+
+    # Format a byte-per-second rate with binary K/M/G thresholds. Values
+    # below 10 retain one decimal when needed; larger values round to an
+    # integer to keep the native bar compact.
     my ($n) = @_;
     my ( $d, $u );
     if ( $n >= 1_073_741_824 ) {
@@ -462,7 +466,7 @@ sub get_traffic {
 
     my ( $rx, $tx ) = ( $row->[$rx_col], $row->[$tx_col] );
     return
-      unless defined $rx
+         unless defined $rx
       && defined $tx
       && $rx =~ /^\d+$/
       && $tx =~ /^\d+$/;
@@ -550,5 +554,5 @@ while (1) {
 
     # select(2) keeps fractional STATUSBAR_INTERVAL values working;
     # Perl's sleep() truncates them to whole seconds.
-    select undef, undef, undef, $interval;
+    select undef, undef, undef, $interval;    ## no critic (ProhibitSleepViaSelect)
 }
