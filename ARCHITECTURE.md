@@ -31,7 +31,7 @@ repository-local `/etc` templates.
 | `.config/*`, `.irssi/*` | Application-specific parsers | Theme and application preferences copied to matching home paths |
 | `sort-packages.pl` | Base Perl | Explicitly sorts a package manifest; not run by the installer |
 | `tests/perl_helpers_test.ksh` | OpenBSD `/bin/ksh` | Explicit non-root tests using a temporary directory and fake `scrot` |
-| `scripts/validate-agent-knowledge.py` | Python 3.11+ | Read-only agent and skill policy validator; does not run the installer |
+| `scripts/validate-agent-knowledge.pl` | Perl 5.14+ (JSON::PP core) | Read-only agent and skill policy validator; does not run the installer |
 | `.github/workflows/agent-knowledge-validation.yml` | GitHub Actions | Read-only pull request contract tests and range validation |
 | `packages.txt` | Installer's `awk` field extraction | Package names passed individually to `pkg_add --` |
 
