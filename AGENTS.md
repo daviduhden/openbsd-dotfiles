@@ -78,8 +78,8 @@ become `.old` backups.
 
 ## Validation
 
-There is no Makefile or project build workflow. The dedicated PR workflow
-runs the read-only agent-validator contract suite and range gate. Use the real
+There is no Makefile or project build workflow. The dedicated manual workflow
+runs the read-only agent-validator contract suite and worktree validation. Use the real
 project checks below; run each file separately because `ksh -n` and `perl -c`
 only inspect their first file operand:
 
@@ -181,8 +181,8 @@ After each change:
    edits to satisfy synchronization. For a project change, at least one
    relevant knowledge artifact must receive a substantive update.
 4. Run `perl scripts/validate-agent-knowledge.pl --scope worktree` and the
-   applicable project checks. For a pull request, CI compares the base and head
-   revisions with `--scope range --base BASE_SHA --head HEAD_SHA`.
+   applicable project checks. To compare committed revisions locally, use
+   `--scope range --base BASE_SHA --head HEAD_SHA`.
 5. Review the validator output and final diff, then report the synchronization
    result. Warnings require human review; a structural pass does not establish
    semantic relevance.
